@@ -8,9 +8,7 @@ import {
   deleteOrder,
 } from "./api";
 
-
 function Orders() {
-
   // =========================
   // STATE
   // =========================
@@ -34,7 +32,6 @@ function Orders() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-
   // =========================
   // LOAD DATA
   // =========================
@@ -44,121 +41,88 @@ function Orders() {
     loadMenu();
   }, []);
 
-
   const loadOrders = async () => {
-
     try {
-
       setLoading(true);
       setError("");
 
       const data = await getOrders();
 
       setOrders(data);
-
     } catch (err) {
-
       console.error(err);
 
       setError("Failed to load orders.");
-
     } finally {
-
       setLoading(false);
-
     }
   };
 
-
   const loadMenu = async () => {
-
     try {
-
       const data = await getMenu();
 
       setMenu(data);
-
     } catch (err) {
-
       console.error("Menu loading error:", err);
-
     }
   };
-
 
   // =========================
   // CALCULATE TOTAL
   // =========================
 
   const calculateTotal = () => {
-
     const selectedItem = menu.find(
-      (item) => item.id === Number(selectedMenuId)
+      (item) => item.id === Number(selectedMenuId),
     );
 
     if (!selectedItem) {
       return 0;
     }
 
-    return (
-      Number(selectedItem.price) *
-      Number(form.quantity)
-    );
+    return Number(selectedItem.price) * Number(form.quantity);
   };
-
 
   // =========================
   // FORM CHANGE
   // =========================
 
   const handleChange = (e) => {
-
     const { name, value } = e.target;
 
     setForm({
       ...form,
       [name]: value,
     });
-
   };
-
 
   // =========================
   // MENU CHANGE
   // =========================
 
   const handleMenuChange = (e) => {
-
     const menuId = e.target.value;
 
     setSelectedMenuId(menuId);
 
-    const selectedItem = menu.find(
-      (item) => item.id === Number(menuId)
-    );
+    const selectedItem = menu.find((item) => item.id === Number(menuId));
 
     setForm({
       ...form,
-      menu_item: selectedItem
-        ? selectedItem.name
-        : "",
+      menu_item: selectedItem ? selectedItem.name : "",
     });
-
   };
-
 
   // =========================
   // SUBMIT ORDER
   // =========================
 
   const handleSubmit = async (e) => {
-
     e.preventDefault();
 
     try {
-
       const orderData = {
-
         customer_name: form.customer_name,
 
         menu_item: form.menu_item,
@@ -168,134 +132,87 @@ function Orders() {
         total_price: calculateTotal(),
 
         status: form.status,
-
       };
 
-
       if (editingId) {
-
-        await updateOrder(
-          editingId,
-          orderData
-        );
+        await updateOrder(editingId, orderData);
 
         alert("Order updated successfully!");
-
       } else {
-
         await createOrder(orderData);
 
         alert("Order created successfully!");
-
       }
-
 
       resetForm();
 
       await loadOrders();
-
     } catch (err) {
-
       console.error(err);
 
       alert("Failed to save order.");
-
     }
-
   };
-
 
   // =========================
   // EDIT ORDER
   // =========================
 
   const handleEdit = (order) => {
-
     setEditingId(order.id);
 
-
     // Find menu item by name
-    const selectedItem = menu.find(
-      (item) => item.name === order.menu_item
-    );
+    const selectedItem = menu.find((item) => item.name === order.menu_item);
 
-
-    setSelectedMenuId(
-      selectedItem
-        ? String(selectedItem.id)
-        : ""
-    );
-
+    setSelectedMenuId(selectedItem ? String(selectedItem.id) : "");
 
     setForm({
+      customer_name: order.customer_name || "",
 
-      customer_name:
-        order.customer_name || "",
+      menu_item: order.menu_item || "",
 
-      menu_item:
-        order.menu_item || "",
+      quantity: order.quantity || 1,
 
-      quantity:
-        order.quantity || 1,
+      total_price: order.total_price || "",
 
-      total_price:
-        order.total_price || "",
-
-      status:
-        order.status || "Pending",
-
+      status: order.status || "Pending",
     });
 
-
     setShowForm(true);
-
   };
-
 
   // =========================
   // DELETE ORDER
   // =========================
 
   const handleDelete = async (id) => {
-
-    const confirmDelete =
-      window.confirm(
-        "Are you sure you want to delete this order?"
-      );
-
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this order?",
+    );
 
     if (!confirmDelete) {
       return;
     }
 
-
     try {
-
       await deleteOrder(id);
 
       alert("Order deleted successfully!");
 
       await loadOrders();
-
     } catch (err) {
-
       console.error(err);
 
       alert("Failed to delete order.");
-
     }
-
   };
-
 
   // =========================
   // RESET FORM
   // =========================
 
   const resetForm = () => {
-
     setForm({
-
       customer_name: "",
 
       menu_item: "",
@@ -305,49 +222,37 @@ function Orders() {
       total_price: "",
 
       status: "Pending",
-
     });
-
 
     setSelectedMenuId("");
 
     setEditingId(null);
 
     setShowForm(false);
-
   };
-
 
   // =========================
   // OPEN ADD ORDER
   // =========================
 
   const openAddOrder = () => {
-
     resetForm();
 
     setShowForm(true);
-
   };
-
 
   // =========================
   // UI
   // =========================
 
   return (
-
-    <div
-      style={{
-        padding: "30px",
-      }}
-    >
-
+    <div className="orders-page">
       {/* =========================
           HEADER
       ========================= */}
 
       <div
+        className="page-header"
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -355,19 +260,11 @@ function Orders() {
           marginBottom: "25px",
         }}
       >
-
         <div>
+          <h1>🛒 Order Management</h1>
 
-          <h1>
-            🛒 Order Management
-          </h1>
-
-          <p>
-            Manage your restaurant orders.
-          </p>
-
+          <p>Manage your restaurant orders.</p>
         </div>
-
 
         <button
           onClick={openAddOrder}
@@ -381,16 +278,13 @@ function Orders() {
         >
           + Add Order
         </button>
-
       </div>
-
 
       {/* =========================
           ADD / EDIT FORM
       ========================= */}
 
       {showForm && (
-
         <div
           style={{
             padding: "25px",
@@ -400,19 +294,9 @@ function Orders() {
             background: "#fff",
           }}
         >
-
-          <h2>
-
-            {editingId
-              ? "✏️ Edit Order"
-              : "➕ Add New Order"}
-
-          </h2>
-
+          <h2>{editingId ? "✏️ Edit Order" : "➕ Add New Order"}</h2>
 
           <form onSubmit={handleSubmit}>
-
-
             {/* =========================
                 CUSTOMER NAME
             ========================= */}
@@ -422,11 +306,7 @@ function Orders() {
                 marginBottom: "15px",
               }}
             >
-
-              <label>
-                Customer Name
-              </label>
-
+              <label>Customer Name</label>
 
               <input
                 type="text"
@@ -434,7 +314,6 @@ function Orders() {
                 value={form.customer_name}
                 onChange={handleChange}
                 required
-
                 style={{
                   display: "block",
                   width: "100%",
@@ -443,9 +322,7 @@ function Orders() {
                   boxSizing: "border-box",
                 }}
               />
-
             </div>
-
 
             {/* =========================
                 MENU ITEM
@@ -456,18 +333,13 @@ function Orders() {
                 marginBottom: "15px",
               }}
             >
-
-              <label>
-                Menu Item
-              </label>
-
+              <label>Menu Item</label>
 
               <select
                 name="menu_item"
                 value={selectedMenuId}
                 onChange={handleMenuChange}
                 required
-
                 style={{
                   display: "block",
                   width: "100%",
@@ -476,35 +348,19 @@ function Orders() {
                   boxSizing: "border-box",
                 }}
               >
-
-                <option value="">
-                  Select Menu Item
-                </option>
-
+                <option value="">Select Menu Item</option>
 
                 {menu
-                  .filter(
-                    (item) => item.available
-                  )
+                  .filter((item) => item.available)
                   .map((item) => (
-
-                    <option
-                      key={item.id}
-                      value={item.id}
-                    >
-
+                    <option key={item.id} value={item.id}>
                       {item.name}
                       {" - ₹"}
                       {Number(item.price).toFixed(2)}
-
                     </option>
-
                   ))}
-
               </select>
-
             </div>
-
 
             {/* =========================
                 QUANTITY
@@ -515,11 +371,7 @@ function Orders() {
                 marginBottom: "15px",
               }}
             >
-
-              <label>
-                Quantity
-              </label>
-
+              <label>Quantity</label>
 
               <input
                 type="number"
@@ -528,7 +380,6 @@ function Orders() {
                 onChange={handleChange}
                 min="1"
                 required
-
                 style={{
                   display: "block",
                   width: "100%",
@@ -537,9 +388,7 @@ function Orders() {
                   boxSizing: "border-box",
                 }}
               />
-
             </div>
-
 
             {/* =========================
                 TOTAL PRICE
@@ -550,18 +399,13 @@ function Orders() {
                 marginBottom: "15px",
               }}
             >
-
-              <label>
-                Total Price
-              </label>
-
+              <label>Total Price</label>
 
               <input
                 type="number"
                 name="total_price"
                 value={calculateTotal()}
                 readOnly
-
                 style={{
                   display: "block",
                   width: "100%",
@@ -572,9 +416,7 @@ function Orders() {
                   boxSizing: "border-box",
                 }}
               />
-
             </div>
-
 
             {/* =========================
                 STATUS
@@ -585,17 +427,12 @@ function Orders() {
                 marginBottom: "20px",
               }}
             >
-
-              <label>
-                Status
-              </label>
-
+              <label>Status</label>
 
               <select
                 name="status"
                 value={form.status}
                 onChange={handleChange}
-
                 style={{
                   display: "block",
                   width: "100%",
@@ -604,31 +441,17 @@ function Orders() {
                   boxSizing: "border-box",
                 }}
               >
+                <option value="Pending">Pending</option>
 
-                <option value="Pending">
-                  Pending
-                </option>
+                <option value="Preparing">Preparing</option>
 
-                <option value="Preparing">
-                  Preparing
-                </option>
+                <option value="Ready">Ready</option>
 
-                <option value="Ready">
-                  Ready
-                </option>
+                <option value="Completed">Completed</option>
 
-                <option value="Completed">
-                  Completed
-                </option>
-
-                <option value="Cancelled">
-                  Cancelled
-                </option>
-
+                <option value="Cancelled">Cancelled</option>
               </select>
-
             </div>
-
 
             {/* =========================
                 BUTTONS
@@ -642,13 +465,8 @@ function Orders() {
                 cursor: "pointer",
               }}
             >
-
-              {editingId
-                ? "Update Order"
-                : "Save Order"}
-
+              {editingId ? "Update Order" : "Save Order"}
             </button>
-
 
             <button
               type="button"
@@ -660,21 +478,15 @@ function Orders() {
             >
               Cancel
             </button>
-
-
           </form>
-
         </div>
-
       )}
-
 
       {/* =========================
           ERROR
       ========================= */}
 
       {error && (
-
         <p
           style={{
             color: "red",
@@ -682,31 +494,21 @@ function Orders() {
         >
           {error}
         </p>
-
       )}
-
 
       {/* =========================
           LOADING
       ========================= */}
 
-      {loading && (
-        <p>
-          Loading orders...
-        </p>
-      )}
-
+      {loading && <p>Loading orders...</p>}
 
       {/* =========================
           ORDERS TABLE
       ========================= */}
 
       {!loading && !error && (
-
         <>
-
           {orders.length === 0 ? (
-
             <div
               style={{
                 padding: "30px",
@@ -715,153 +517,84 @@ function Orders() {
                 textAlign: "center",
               }}
             >
-
-              <h2>
-                📭 No Orders Yet
-              </h2>
+              <h2>📭 No Orders Yet</h2>
 
               <p>
-                Click{" "}
-                <b>+ Add Order</b>{" "}
-                to create your first order.
+                Click <b>+ Add Order</b> to create your first order.
               </p>
-
             </div>
-
           ) : (
+            <div className="orders-table-panel">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
 
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-              }}
-            >
+                    <th>Customer Name</th>
 
-              <thead>
+                    <th>Menu Item</th>
 
-                <tr>
+                    <th>Quantity</th>
 
-                  <th>ID</th>
+                    <th>Total Price</th>
 
-                  <th>
-                    Customer Name
-                  </th>
+                    <th>Status</th>
 
-                  <th>
-                    Menu Item
-                  </th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
 
-                  <th>
-                    Quantity
-                  </th>
-
-                  <th>
-                    Total Price
-                  </th>
-
-                  <th>
-                    Status
-                  </th>
-
-                  <th>
-                    Actions
-                  </th>
-
-                </tr>
-
-              </thead>
-
-
-              <tbody>
-
-                {orders.map(
-                  (order, index) => (
-
+                <tbody>
+                  {orders.map((order, index) => (
                     <tr key={order.id}>
+                      <td>#{index + 1}</td>
+
+                      <td>{order.customer_name}</td>
+
+                      <td>{order.menu_item}</td>
+
+                      <td>{order.quantity}</td>
+
+                      <td>₹{Number(order.total_price).toFixed(2)}</td>
 
                       <td>
-                        #{index + 1}
+                        <span className="order-status">
+                          {order.status || "Pending"}
+                        </span>
                       </td>
-
 
                       <td>
-                        {order.customer_name}
+                        <div className="order-actions">
+                          <button
+                            onClick={() => handleEdit(order)}
+                            style={{
+                              marginRight: "8px",
+                              cursor: "pointer",
+                            }}
+                          >
+                            ✏️ Edit
+                          </button>
+
+                          <button
+                            onClick={() => handleDelete(order.id)}
+                            style={{
+                              cursor: "pointer",
+                            }}
+                          >
+                            🗑️ Delete
+                          </button>
+                        </div>
                       </td>
-
-
-                      <td>
-                        {order.menu_item}
-                      </td>
-
-
-                      <td>
-                        {order.quantity}
-                      </td>
-
-
-                      <td>
-                        ₹
-                        {Number(
-                          order.total_price
-                        ).toFixed(2)}
-                      </td>
-
-
-                      <td>
-                        {order.status ||
-                          "Pending"}
-                      </td>
-
-
-                      <td>
-
-                        <button
-                          onClick={() =>
-                            handleEdit(order)
-                          }
-                          style={{
-                            marginRight: "8px",
-                            cursor: "pointer",
-                          }}
-                        >
-                          ✏️ Edit
-                        </button>
-
-
-                        <button
-                          onClick={() =>
-                            handleDelete(
-                              order.id
-                            )
-                          }
-                          style={{
-                            cursor: "pointer",
-                          }}
-                        >
-                          🗑️ Delete
-                        </button>
-
-                      </td>
-
                     </tr>
-
-                  )
-                )}
-
-              </tbody>
-
-            </table>
-
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
-
         </>
-
       )}
-
     </div>
-
   );
 }
-
 
 export default Orders;

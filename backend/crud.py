@@ -12,6 +12,31 @@ from models import (
     Settings,
 )
 
+# =========================================================
+# USERS
+# =========================================================
+
+def get_all_users(db: Session):
+    return db.query(User).all()
+
+
+def create_user(db: Session, user_data):
+    """
+    user_data can be a dict or a Pydantic schema object with
+    name/email/password fields — used by routes/users.py.
+    """
+    if hasattr(user_data, "model_dump"):
+        data = user_data.model_dump()
+    else:
+        data = dict(user_data)
+
+    user = User(**data)
+
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return user
 
 # =========================================================
 # MENU CRUD
@@ -26,7 +51,8 @@ def create_menu(db: Session, item):
         name=item.name,
         category=item.category,
         price=item.price,
-        available=item.available
+        available=item.available,
+        image_url=item.image_url
     )
 
     db.add(new_menu)
@@ -46,6 +72,7 @@ def update_menu(db: Session, menu_id: int, item):
     menu.category = item.category
     menu.price = item.price
     menu.available = item.available
+    menu.image_url = item.image_url
 
     db.commit()
     db.refresh(menu)

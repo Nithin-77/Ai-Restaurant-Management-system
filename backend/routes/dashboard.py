@@ -2,7 +2,10 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
-from database import get_db
+try:
+    from database import get_db
+except (ImportError, ValueError):
+    from ..database import get_db
 from models import Menu, Order, Reservation, User
 
 router = APIRouter(

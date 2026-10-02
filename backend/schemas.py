@@ -12,6 +12,7 @@ class MenuCreate(BaseModel):
     name: str
     category: Optional[str] = None
     price: float
+    image_url: Optional[str] = None
     available: bool = True
 
 
@@ -161,3 +162,84 @@ class SettingsUpdate(BaseModel):
     notifications_enabled: Optional[bool] = None
 
     ai_enabled: Optional[bool] = None
+
+# =========================================================
+# REVIEW SCHEMA
+# =========================================================
+
+class ReviewCreate(BaseModel):
+    customer_name: str
+    menu_item: Optional[str] = None
+    rating: int = 5
+    comment: str
+
+
+# =========================================================
+# SUPPLIER SCHEMA
+# =========================================================
+
+class SupplierCreate(BaseModel):
+    name: str
+    contact_person: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[EmailStr] = None
+    category: Optional[str] = None
+    address: Optional[str] = None
+
+
+# =========================================================
+# STAFF SCHEMA
+# =========================================================
+
+class StaffCreate(BaseModel):
+    name: str
+    role: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[EmailStr] = None
+    shift: str = "Morning"
+    salary: float = 0.0
+    active: bool = True
+    joined_on: Optional[date] = None
+
+
+# =========================================================
+# WASTE SCHEMA
+# =========================================================
+
+class WasteCreate(BaseModel):
+    item_name: str
+    quantity: float
+    unit: str = "kg"
+    reason: Optional[str] = None
+    cost: float = 0.0
+
+
+# =========================================================
+# AUTH SCHEMAS
+# =========================================================
+
+class RegisterRequest(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+    user: dict
+
+
+# =========================================================
+# AI REQUEST SCHEMAS
+# =========================================================
+
+class SentimentRequest(BaseModel):
+    text: str
+    

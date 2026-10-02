@@ -1,7 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from database import get_db
+try:
+    from database import get_db
+except (ImportError, ValueError):
+    from ..database import get_db
 from models import Menu
 from schemas import MenuCreate
 
@@ -27,7 +30,8 @@ def add_menu(
         name=item.name,
         category=item.category,
         price=item.price,
-        available=True
+        available=True,
+        image_url=item.image_url
     )
 
     db.add(new_item)
@@ -57,6 +61,8 @@ def update_menu(
     menu_item.name = item.name
     menu_item.category = item.category
     menu_item.price = item.price
+    menu_item.image_url = item.image_url
+    menu_item.available = item.available
 
     db.commit()
     db.refresh(menu_item)
@@ -108,5 +114,44 @@ def toggle_availability(
 
     db.commit()
     db.refresh(menu_item)
+
+    return menu_item
+
+
+# UPDATE PRICE (for Dynamic Pricing suggestions)
+@router.patch("/{item_id}/price")
+def update_price(
+    item_id: int,
+    price_data: dict,
+    db: Session = Depends(get_db)
+):
+    menu_item = db.query(Menu).filter(Menu.id == item_id).first()
+    if not menu_item:
+        raise HTTPException(status_code=404, detail="Menu item not found")
+
+    new_price = price_data.get("price")
+    if new_price is not None:
+        menu_item.price = float(new_price)
+        db.commit()
+        db.refresh(menu_item)
+
+    return menu_item
+
+
+@router.patch("/by-name/{name}/price")
+def update_price_by_name(
+    name: str,
+    price_data: dict,
+    db: Session = Depends(get_db)
+):
+    menu_item = db.query(Menu).filter(Menu.name == name).first()
+    if not menu_item:
+        raise HTTPException(status_code=404, detail="Menu item not found")
+
+    new_price = price_data.get("price")
+    if new_price is not None:
+        menu_item.price = float(new_price)
+        db.commit()
+        db.refresh(menu_item)
 
     return menu_item

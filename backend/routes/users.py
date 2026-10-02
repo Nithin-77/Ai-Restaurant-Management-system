@@ -1,7 +1,10 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from database import get_db
+try:
+    from database import get_db
+except (ImportError, ValueError):
+    from ..database import get_db
 from crud import get_all_users, create_user
 from schemas import UserCreate
 
