@@ -814,6 +814,16 @@ export const getCustomerAnalytics = async () => {
   return response.data;
 };
 
+export const getTodayAnalytics = async () => {
+  const response = await API.get("/api/analytics/today");
+  return response.data;
+};
+
+export const getCustomerTodayAnalytics = async () => {
+  const response = await API.get("/api/analytics/customer/today");
+  return response.data;
+};
+
 // ============================================================
 // PHASE 5 - ADMIN AI BUSINESS ASSISTANT
 //
@@ -1029,6 +1039,15 @@ export const getSettings = async () => {
   return response.data;
 };
 
+// Read-only public settings. No token required - returns only safe
+// display fields (currency, tax, service charge, opening hours) that
+// the customer portal needs for formatting. Admin-only fields are not
+// included.
+export const getPublicSettings = async () => {
+  const response = await API.get("/api/settings/public");
+  return response.data;
+};
+
 export const createSettings = async (settings) => {
   const response = await API.post("/api/settings/", settings);
   return response.data;
@@ -1038,6 +1057,31 @@ export const updateSettings = async (id, settings) => {
   const response = await API.put("/api/settings/" + String(id), settings);
   return response.data;
 };
+
+// ============================================================
+// MENU CUSTOMIZATIONS
+// ============================================================
+
+export const getMenuCustomizations = async (menuId) => {
+  const response = await API.get(`/api/orders/menu/${menuId}/customizations`);
+  return response.data;
+};
+
+export const createMenuCustomization = async (payload) => {
+  const response = await API.post("/api/orders/menu/customizations", payload);
+  return response.data;
+};
+
+export const updateMenuCustomization = async (custId, payload) => {
+  const response = await API.put(`/api/orders/menu/customizations/${custId}`, payload);
+  return response.data;
+};
+
+export const deleteMenuCustomization = async (custId) => {
+  const response = await API.delete(`/api/orders/menu/customizations/${custId}`);
+  return response.data;
+};
+
 
 // ============================================================
 // EXPORT AXIOS INSTANCE

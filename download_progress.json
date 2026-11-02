@@ -1,0 +1,481 @@
+{
+  "successful": [
+    [
+      "Corn Palak",
+      "Veg",
+      "corn-palak"
+    ],
+    [
+      "Gobi Manchurian",
+      "Veg",
+      "gobi-manchurian"
+    ],
+    [
+      "Malai Kofta",
+      "Veg",
+      "malai-kofta"
+    ],
+    [
+      "Navratan Korma",
+      "Veg",
+      "navratan-korma"
+    ],
+    [
+      "Palak Paneer",
+      "Veg",
+      "palak-paneer"
+    ],
+    [
+      "Paneer Bhurji",
+      "Veg",
+      "paneer-bhurji"
+    ],
+    [
+      "Paneer Butter Masala",
+      "Veg",
+      "paneer-butter-masala"
+    ],
+    [
+      "Paneer Tikka Masala",
+      "Veg",
+      "paneer-tikka-masala"
+    ],
+    [
+      "Veg Pulao",
+      "Veg",
+      "veg-pulao"
+    ],
+    [
+      "Vegetable Dum Biryani",
+      "Veg",
+      "vegetable-dum-biryani"
+    ],
+    [
+      "Vegetable Fried Rice",
+      "Veg",
+      "vegetable-fried-rice"
+    ],
+    [
+      "Vegetable Jalfrezi",
+      "Veg",
+      "vegetable-jalfrezi"
+    ],
+    [
+      "Vegetable Korma",
+      "Veg",
+      "vegetable-korma"
+    ],
+    [
+      "Amritsari Fish",
+      "Non-Veg",
+      "amritsari-fish"
+    ],
+    [
+      "Chicken 65",
+      "Non-Veg",
+      "chicken-65"
+    ],
+    [
+      "Chicken Butter Masala",
+      "Non-Veg",
+      "chicken-butter-masala"
+    ],
+    [
+      "Chicken Chettinad",
+      "Non-Veg",
+      "chicken-chettinad"
+    ],
+    [
+      "Chicken Kolhapuri",
+      "Non-Veg",
+      "chicken-kolhapuri"
+    ],
+    [
+      "Chicken Korma",
+      "Non-Veg",
+      "chicken-korma"
+    ],
+    [
+      "Chicken Lollipop",
+      "Non-Veg",
+      "chicken-lollipop"
+    ],
+    [
+      "Chicken Vindaloo",
+      "Non-Veg",
+      "chicken-vindaloo"
+    ],
+    [
+      "Egg Curry",
+      "Non-Veg",
+      "egg-curry"
+    ],
+    [
+      "Fish Curry",
+      "Non-Veg",
+      "fish-curry"
+    ],
+    [
+      "Fish Tikka",
+      "Non-Veg",
+      "fish-tikka"
+    ],
+    [
+      "Hyderabadi Chicken Dum Biryani",
+      "Non-Veg",
+      "hyderabadi-chicken-dum-biryani"
+    ],
+    [
+      "Mutton Biryani",
+      "Non-Veg",
+      "mutton-biryani"
+    ],
+    [
+      "Mutton Kheema",
+      "Non-Veg",
+      "mutton-kheema"
+    ],
+    [
+      "Mutton Rogan Josh",
+      "Non-Veg",
+      "mutton-rogan-josh"
+    ],
+    [
+      "Prawn Masala",
+      "Non-Veg",
+      "prawn-masala"
+    ],
+    [
+      "Tandoori Chicken",
+      "Non-Veg",
+      "tandoori-chicken"
+    ],
+    [
+      "Besan Ladoo",
+      "Desserts",
+      "besan-ladoo"
+    ],
+    [
+      "Cham Cham",
+      "Desserts",
+      "cham-cham"
+    ],
+    [
+      "Chocolate Brownie",
+      "Desserts",
+      "chocolate-brownie"
+    ],
+    [
+      "Coconut Barfi",
+      "Desserts",
+      "coconut-barfi"
+    ],
+    [
+      "Gajar Ka Halwa",
+      "Desserts",
+      "gajar-ka-halwa"
+    ],
+    [
+      "Gulab Jamun",
+      "Desserts",
+      "gulab-jamun"
+    ],
+    [
+      "Jalebi",
+      "Desserts",
+      "jalebi"
+    ],
+    [
+      "Kaju Katli",
+      "Desserts",
+      "kaju-katli"
+    ],
+    [
+      "Kesar Kulfi",
+      "Desserts",
+      "kesar-kulfi"
+    ],
+    [
+      "Kheer",
+      "Desserts",
+      "kheer"
+    ],
+    [
+      "Modak",
+      "Desserts",
+      "modak"
+    ],
+    [
+      "Mysore Pak",
+      "Desserts",
+      "mysore-pak"
+    ],
+    [
+      "Peda",
+      "Desserts",
+      "peda"
+    ],
+    [
+      "Phirni",
+      "Desserts",
+      "phirni"
+    ],
+    [
+      "Rasgulla",
+      "Desserts",
+      "rasgulla"
+    ],
+    [
+      "Rasmalai",
+      "Desserts",
+      "rasmalai"
+    ],
+    [
+      "Sandesh",
+      "Desserts",
+      "sandesh"
+    ],
+    [
+      "Shahi Tukda",
+      "Desserts",
+      "shahi-tukda"
+    ],
+    [
+      "Chocolate Milkshake",
+      "Cool Drinks",
+      "chocolate-milkshake"
+    ],
+    [
+      "Cold Coffee",
+      "Cool Drinks",
+      "cold-coffee"
+    ],
+    [
+      "Cranberry Cooler",
+      "Cool Drinks",
+      "cranberry-cooler"
+    ],
+    [
+      "Fresh Lime Soda",
+      "Cool Drinks",
+      "fresh-lime-soda"
+    ],
+    [
+      "Mango Lassi",
+      "Cool Drinks",
+      "mango-lassi"
+    ],
+    [
+      "Mango Milkshake",
+      "Cool Drinks",
+      "mango-milkshake"
+    ],
+    [
+      "Masala Chaas",
+      "Cool Drinks",
+      "masala-chaas"
+    ],
+    [
+      "Mix Fruit Juice",
+      "Cool Drinks",
+      "mix-fruit-juice"
+    ],
+    [
+      "Orange Juice",
+      "Cool Drinks",
+      "orange-juice"
+    ],
+    [
+      "Oreo Milkshake",
+      "Cool Drinks",
+      "oreo-milkshake"
+    ],
+    [
+      "Pineapple Juice",
+      "Cool Drinks",
+      "pineapple-juice"
+    ],
+    [
+      "Rose Falooda",
+      "Cool Drinks",
+      "rose-falooda"
+    ],
+    [
+      "Salted Lassi",
+      "Cool Drinks",
+      "salted-lassi"
+    ],
+    [
+      "Strawberry Milkshake",
+      "Cool Drinks",
+      "strawberry-milkshake"
+    ],
+    [
+      "Sweet Lassi",
+      "Cool Drinks",
+      "sweet-lassi"
+    ],
+    [
+      "Vanilla Milkshake",
+      "Cool Drinks",
+      "vanilla-milkshake"
+    ],
+    [
+      "Virgin Mojito",
+      "Cool Drinks",
+      "virgin-mojito"
+    ],
+    [
+      "Watermelon Juice",
+      "Cool Drinks",
+      "watermelon-juice"
+    ],
+    [
+      "Chana Masala",
+      "Veg",
+      "chana-masala.jpg",
+      "File already existed"
+    ],
+    [
+      "Dal Makhani",
+      "Veg",
+      "dal-makhani.jpg",
+      "File already existed"
+    ],
+    [
+      "Jeera Rice",
+      "Veg",
+      "jeera-rice.jpg",
+      "File already existed"
+    ],
+    [
+      "Aloo Gobi",
+      "Veg",
+      "aloo-gobi.jpg",
+      "File already existed"
+    ],
+    [
+      "Bhindi Masala",
+      "Veg",
+      "bhindi-masala.jpg",
+      "File already existed"
+    ],
+    [
+      "Mushroom Masala",
+      "Veg",
+      "mushroom-masala.jpg",
+      "File already existed"
+    ],
+    [
+      "Chicken Tikka Masala",
+      "Non-Veg",
+      "chicken-tikka-masala.jpg",
+      "File already existed"
+    ],
+    [
+      "Chicken Saagwala",
+      "Non-Veg",
+      "chicken-saagwala.jpg",
+      "File already existed"
+    ],
+    [
+      "Mutton Korma",
+      "Non-Veg",
+      "mutton-korma.jpg",
+      "File already existed"
+    ],
+    [
+      "Malpua",
+      "Desserts",
+      "malpua.jpg",
+      "File already existed"
+    ],
+    [
+      "Anjeer Halwa",
+      "Desserts",
+      "anjeer-halwa.jpg",
+      "File already existed"
+    ],
+    [
+      "Blue Lagoon",
+      "Cool Drinks",
+      "blue-lagoon.jpg",
+      "File already existed"
+    ],
+    [
+      "Iced Tea",
+      "Cool Drinks",
+      "iced-tea.jpg",
+      "File already existed"
+    ],
+    [
+      "Chicken Saagwala",
+      "Non-Veg",
+      "chicken-saagwala.jpg",
+      "Downloaded via 'Chicken Saag'"
+    ],
+    [
+      "Chicken Tikka Masala",
+      "Non-Veg",
+      "chicken-tikka-masala.jpg",
+      "Downloaded via 'Chicken Tikka Masala'"
+    ],
+    [
+      "Mutton Korma",
+      "Non-Veg",
+      "mutton-korma.jpg",
+      "Downloaded via 'Mutton Korma'"
+    ],
+    [
+      "Anjeer Halwa",
+      "Desserts",
+      "anjeer-halwa.jpg",
+      "Downloaded via 'Anjeer'"
+    ],
+    [
+      "Malpua",
+      "Desserts",
+      "malpua.jpg",
+      "Downloaded via 'Malpua'"
+    ],
+    [
+      "Blue Lagoon",
+      "Cool Drinks",
+      "blue-lagoon.jpg",
+      "Downloaded via 'Blue Lagoon drink'"
+    ],
+    [
+      "Mutton Korma",
+      "Non-Veg",
+      "mutton-korma.jpg",
+      "Downloaded via 'Mutton Korma'"
+    ],
+    [
+      "Chicken Saagwala",
+      "Non-Veg",
+      "chicken-saagwala.jpg",
+      "Downloaded via 'Chicken Palak'"
+    ],
+    [
+      "Mutton Korma",
+      "Non-Veg",
+      "mutton-korma.jpg",
+      "Downloaded"
+    ],
+    [
+      "Anjeer Halwa",
+      "Desserts",
+      "anjeer-halwa.jpg",
+      "Downloaded"
+    ]
+  ],
+  "failed": [],
+  "skipped": [
+    [
+      "Kadai Paneer",
+      "Veg",
+      "kadai-paneer.jpg",
+      "Already installed"
+    ]
+  ]
+}

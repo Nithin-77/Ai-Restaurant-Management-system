@@ -43,7 +43,9 @@ not *what the answer is*. Every figure still comes from a database query.
 """
 
 import re
-from datetime import date, timedelta
+from datetime import timedelta
+
+from utils.timezone import restaurant_today, restaurant_yesterday
 
 
 # =========================================================
@@ -102,13 +104,13 @@ _WINDOW_PATTERNS = [
 
 def _window_for(key: str, context: dict | None = None) -> tuple:
     """Resolve a window key to concrete inclusive dates and a label."""
-    today = date.today()
+    today = restaurant_today()
 
     if key == "today":
         return today, today, "today"
 
     if key == "yesterday":
-        day = today - timedelta(days=1)
+        day = restaurant_yesterday()
 
         return day, day, "yesterday"
 

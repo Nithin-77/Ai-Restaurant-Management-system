@@ -27,7 +27,43 @@ router = APIRouter(
 
 
 # =========================================================
-# GET SETTINGS
+# PUBLIC SETTINGS
+# Read-only, no authentication required. Only safe, display-facing
+# fields are returned - nothing secret, nothing the browser should not
+# see. Customers use this for currency formatting and tax display.
+# =========================================================
+
+@router.get("/public")
+def read_public_settings(
+    db: Session = Depends(get_db),
+):
+
+    settings = get_settings(db)
+
+    if not settings:
+        return {
+            "currency": "INR",
+            "tax_percentage": 5.0,
+            "service_charge_percentage": 0.0,
+        }
+
+    return {
+        "id": settings.id,
+        "restaurant_name": settings.restaurant_name,
+        "currency": settings.currency,
+        "tax_percentage": settings.tax_percentage,
+        "service_charge_percentage": settings.service_charge_percentage,
+        "opening_time": settings.opening_time,
+        "closing_time": settings.closing_time,
+        "notifications_enabled": settings.notifications_enabled,
+        "ai_enabled": settings.ai_enabled,
+    }
+
+
+# =========================================================
+# GET SETTINGS (admin)
+# Full settings row - admin only. Contains contact details that are
+# not secret but are not part of the public contract either.
 # =========================================================
 
 @router.get("/")

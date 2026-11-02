@@ -5,8 +5,11 @@ from jose import JWTError, jwt
 
 from dotenv import load_dotenv
 import os
+from pathlib import Path
 
-load_dotenv()
+# Load .env from the backend directory regardless of the current working directory
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BACKEND_DIR / ".env")
 
 
 # The signing key must be supplied by the environment. A hardcoded

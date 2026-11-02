@@ -1,4 +1,4 @@
-import { getDishImage, isVegItem } from "../dishImages";
+import { getDishImage, isVegItem, FALLBACK_DISH_IMAGE } from "../dishImages";
 import { formatMoney } from "../money";
 
 /**
@@ -63,14 +63,17 @@ export function RecommendationCard({
       style={{ "--delay": `${Math.min(index, 8) * 80}ms` }}
     >
       <div className="rec-card-media">
-        <img
-          src={getDishImage({ ...item, name })}
-          alt={name}
-          loading="lazy"
-          decoding="async"
-          width="420"
-          height="280"
-        />
+<img
+  src={getDishImage({ ...item, name })}
+  alt={name}
+  loading="lazy"
+  decoding="async"
+  width="420"
+  height="280"
+  onError={(e) => {
+    e.currentTarget.src = FALLBACK_DISH_IMAGE;
+  }}
+/>
 
         <div className="rec-card-overlay" />
 

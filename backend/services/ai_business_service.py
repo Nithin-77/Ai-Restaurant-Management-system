@@ -29,11 +29,12 @@ that contains no figures at all.
 """
 
 import re
-from datetime import date, timedelta
+from datetime import timedelta
 
 from sqlalchemy.orm import Session
 
 from services import analytics_service as analytics
+from utils.timezone import restaurant_today, restaurant_yesterday
 
 
 # Every intent the assistant is allowed to answer. Anything not matched
@@ -365,7 +366,7 @@ def build_result(db: Session, intent: str, params: dict) -> dict:
 
     # ----------------------------------------------------------
     if intent == "revenue_today":
-        today = date.today()
+        today = restaurant_today()
 
         window = analytics.revenue_for_window(db, today, today)
 
@@ -394,7 +395,7 @@ def build_result(db: Session, intent: str, params: dict) -> dict:
 
     # ----------------------------------------------------------
     if intent == "revenue_yesterday":
-        yesterday = date.today() - timedelta(days=1)
+        yesterday = restaurant_yesterday()
 
         window = analytics.revenue_for_window(db, yesterday, yesterday)
 

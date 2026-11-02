@@ -44,9 +44,11 @@ from models import (
     Order,
     OrderHeader,
     Reservation,
+    Review,
     User,
     Waste,
 )
+from utils.timezone import restaurant_today, restaurant_yesterday, restaurant_now
 
 
 # =========================================================
@@ -84,7 +86,7 @@ def resolve_range(range_key: str | None, start: date | None = None,
     response can state exactly which window it describes instead of
     leaving the caller to guess.
     """
-    today = date.today()
+    today = restaurant_today()
 
     key = (range_key or "last_7_days").strip().lower()
 
@@ -347,33 +349,74 @@ def top_dishes(db: Session, limit: int = 5, range_key: str = "all_time",
     """
     Best selling dishes by quantity, with their real revenue.
 
-    Category and current menu price are joined from `menu` by name. The
-    join is a LEFT JOIN in effect: a dish that has since been renamed or
-    removed still reports the sales it actually had, with category None
-    rather than being dropped from the leaderboard.
+    Includes both legacy orders (orders.order_id IS NULL) and checkout orders
+    (orders.order_id IS NOT NULL, linked to order_headers). Category and
+    current menu price are joined from `menu` by name.
     """
     limit = max(1, min(int(limit or 5), 25))
 
     start, end, label = resolve_range(range_key, start, end)
 
-    rows = (
+    # Query legacy orders (order_id IS NULL)
+    legacy_rows = (
         db.query(
             Order.menu_item,
             func.coalesce(func.sum(Order.quantity), 0),
             func.coalesce(func.sum(Order.total_price), 0.0),
             func.count(Order.id),
         )
-        .filter(_daterange(Order.created_at, start, end))
-        .group_by(Order.menu_item)
-        .order_by(
-            func.coalesce(func.sum(Order.quantity), 0).desc(),
-            func.coalesce(func.sum(Order.total_price), 0.0).desc(),
+        .filter(
+            _daterange(Order.created_at, start, end),
+            Order.order_id.is_(None),
         )
-        .limit(limit)
+        .group_by(Order.menu_item)
         .all()
     )
 
-    names = [row[0] for row in rows]
+    # Query checkout order lines (order_id IS NOT NULL)
+    checkout_rows = (
+        db.query(
+            Order.menu_item,
+            func.coalesce(func.sum(Order.quantity), 0),
+            func.coalesce(func.sum(Order.total_price), 0.0),
+            func.count(Order.id),
+        )
+        .filter(
+            _daterange(Order.created_at, start, end),
+            Order.order_id.isnot(None),
+        )
+        .group_by(Order.menu_item)
+        .all()
+    )
+
+    # Combine quantities and revenue by dish name
+    combined = {}
+    for name, qty, rev, times in legacy_rows:
+        combined[name] = {
+            "quantity": int(qty or 0),
+            "revenue": float(rev or 0),
+            "times": int(times or 0),
+        }
+    for name, qty, rev, times in checkout_rows:
+        if name in combined:
+            combined[name]["quantity"] += int(qty or 0)
+            combined[name]["revenue"] += float(rev or 0)
+            combined[name]["times"] += int(times or 0)
+        else:
+            combined[name] = {
+                "quantity": int(qty or 0),
+                "revenue": float(rev or 0),
+                "times": int(times or 0),
+            }
+
+    # Sort by quantity sold desc, then revenue desc
+    sorted_items = sorted(
+        combined.items(),
+        key=lambda x: (x[1]["quantity"], x[1]["revenue"]),
+        reverse=True,
+    )[:limit]
+
+    names = [item[0] for item in sorted_items]
 
     menu_by_name = {}
 
@@ -383,7 +426,7 @@ def top_dishes(db: Session, limit: int = 5, range_key: str = "all_time",
 
     dishes = []
 
-    for name, quantity, revenue, times in rows:
+    for name, data in sorted_items:
         item = menu_by_name.get(name)
 
         dishes.append(
@@ -391,9 +434,9 @@ def top_dishes(db: Session, limit: int = 5, range_key: str = "all_time",
                 "dish": name,
                 "menu_id": item.id if item else None,
                 "category": item.category if item else None,
-                "quantity_sold": int(quantity or 0),
-                "revenue": round(float(revenue or 0), 2),
-                "times_ordered": int(times or 0),
+                "quantity_sold": data["quantity"],
+                "revenue": round(data["revenue"], 2),
+                "times_ordered": data["times"],
                 "current_price": float(item.price or 0) if item else None,
                 "available": bool(item.available) if item else None,
             }
@@ -412,32 +455,71 @@ def top_dishes(db: Session, limit: int = 5, range_key: str = "all_time",
 def revenue_by_category(db: Session, range_key: str = "all_time",
                         start: date | None = None,
                         end: date | None = None) -> dict:
-    """Revenue grouped by menu category, from real order lines."""
+    """Revenue grouped by menu category, from real order lines (legacy + checkout)."""
     start, end, label = resolve_range(range_key, start, end)
 
-    rows = (
+    # Legacy orders (order_id IS NULL)
+    legacy_rows = (
         db.query(
             Menu.category,
             func.coalesce(func.sum(Order.quantity), 0),
             func.coalesce(func.sum(Order.total_price), 0.0),
         )
         .join(Order, Order.menu_item == Menu.name)
-        .filter(_daterange(Order.created_at, start, end))
+        .filter(
+            _daterange(Order.created_at, start, end),
+            Order.order_id.is_(None),
+        )
         .group_by(Menu.category)
-        .order_by(func.coalesce(func.sum(Order.total_price), 0.0).desc())
         .all()
     )
 
-    slices = []
+    # Checkout orders (order_id IS NOT NULL)
+    checkout_rows = (
+        db.query(
+            Menu.category,
+            func.coalesce(func.sum(Order.quantity), 0),
+            func.coalesce(func.sum(Order.total_price), 0.0),
+        )
+        .join(Order, Order.menu_item == Menu.name)
+        .filter(
+            _daterange(Order.created_at, start, end),
+            Order.order_id.isnot(None),
+        )
+        .group_by(Menu.category)
+        .all()
+    )
 
-    for category, quantity, revenue in rows:
+    # Combine by category
+    combined = {}
+    for category, qty, rev in legacy_rows:
+        cat = category or "Uncategorised"
+        combined[cat] = {
+            "quantity": int(qty or 0),
+            "revenue": float(rev or 0),
+        }
+    for category, qty, rev in checkout_rows:
+        cat = category or "Uncategorised"
+        if cat in combined:
+            combined[cat]["quantity"] += int(qty or 0)
+            combined[cat]["revenue"] += float(rev or 0)
+        else:
+            combined[cat] = {
+                "quantity": int(qty or 0),
+                "revenue": float(rev or 0),
+            }
+
+    slices = []
+    for category, data in combined.items():
         slices.append(
             {
-                "category": category or "Uncategorised",
-                "quantity_sold": int(quantity or 0),
-                "revenue": round(float(revenue or 0), 2),
+                "category": category,
+                "quantity_sold": data["quantity"],
+                "revenue": round(data["revenue"], 2),
             }
         )
+
+    slices.sort(key=lambda x: x["revenue"], reverse=True)
 
     return {
         "range": label,
@@ -919,8 +1001,8 @@ def analytics_overview(db: Session) -> dict:
     `unpaid_served_orders` is reported because it is a genuine part of
     this restaurant's day: food served, payment collected later.
     """
-    today = date.today()
-    yesterday = today - timedelta(days=1)
+    today = restaurant_today()
+    yesterday = restaurant_yesterday()
 
     today_money = revenue_for_window(db, today, today)
     yesterday_money = revenue_for_window(db, yesterday, yesterday)
@@ -933,7 +1015,7 @@ def analytics_overview(db: Session) -> dict:
     total_orders = db.query(Order).count()
 
     return {
-        "generated_at": datetime.utcnow().isoformat(timespec="seconds"),
+        "generated_at": restaurant_now().isoformat(timespec="seconds"),
         "today": {
             "date": today.isoformat(),
             "revenue": today_money["revenue"],
@@ -981,6 +1063,342 @@ def analytics_overview(db: Session) -> dict:
             ),
         },
         "has_data": today_money["orders"] > 0 or lifecycle["total_orders"] > 0,
+    }
+
+
+def analytics_today(db: Session) -> dict:
+    """
+    Detailed today's metrics for the admin command center and customer portal.
+
+    All figures are derived from the database for the current restaurant date.
+    """
+    today = restaurant_today()
+
+    # Get today's revenue breakdown
+    today_money = revenue_for_window(db, today, today)
+    today_sales = sales_summary(db, "today")
+    today_waste = wastage_summary(db, "today")
+    stock = inventory_summary(db)
+
+    # Today's order headers (for lifecycle and payment)
+    today_headers = db.query(OrderHeader).filter(
+        _daterange(OrderHeader.placed_at, today, today)
+    ).all()
+
+    # Today's legacy orders
+    today_legacy_orders = db.query(Order).filter(
+        _daterange(Order.created_at, today, today),
+        Order.order_id.is_(None),
+    ).all()
+
+    # Order lifecycle counts for TODAY only
+    today_lifecycle = {status: 0 for status in LIFECYCLE_STATUSES}
+    today_lifecycle["Cancelled"] = 0
+    for header in today_headers:
+        if header.status in today_lifecycle:
+            today_lifecycle[header.status] += 1
+        else:
+            today_lifecycle[header.status] = today_lifecycle.get(header.status, 0) + 1
+    for order in today_legacy_orders:
+        # Map legacy statuses
+        legacy_to_lifecycle = {
+            "Pending": "Placed",
+            "Confirmed": "Confirmed",
+            "Preparing": "Preparing",
+            "Ready": "Ready",
+            "Served": "Served",
+            "Completed": "Served",
+            "Cancelled": "Cancelled",
+        }
+        mapped = legacy_to_lifecycle.get(order.status, "Served")
+        today_lifecycle[mapped] = today_lifecycle.get(mapped, 0) + 1
+
+    # Today's payment status counts
+    today_payment = {}
+    for header in today_headers:
+        today_payment[header.payment_status] = today_payment.get(header.payment_status, 0) + 1
+    # Legacy orders have unknown payment status
+    if today_legacy_orders:
+        today_payment["unpaid"] = today_payment.get("unpaid", 0) + len(today_legacy_orders)
+
+    # Customer metrics for today
+    new_customers_today = (
+        db.query(Customer)
+        .filter(func.date(Customer.created_at) == today)
+        .count()
+    )
+
+    # Customers with active orders today
+    customers_with_active_orders = (
+        db.query(OrderHeader.user_id)
+        .filter(
+            _daterange(OrderHeader.placed_at, today, today),
+            OrderHeader.status.in_(ACTIVE_LIFECYCLE_STATUSES),
+            OrderHeader.user_id.isnot(None),
+        )
+        .distinct()
+        .count()
+    )
+
+    # Customers with unpaid bills today
+    customers_with_unpaid = (
+        db.query(OrderHeader.user_id)
+        .filter(
+            _daterange(OrderHeader.placed_at, today, today),
+            OrderHeader.payment_status != "paid",
+            OrderHeader.user_id.isnot(None),
+        )
+        .distinct()
+        .count()
+    )
+
+    # Today's reservations
+    today_reservations = (
+        db.query(Reservation)
+        .filter(Reservation.reservation_date == today)
+        .all()
+    )
+
+    reservation_status_counts = {}
+    for r in today_reservations:
+        reservation_status_counts[r.status] = reservation_status_counts.get(r.status, 0) + 1
+
+    # Today's reviews
+    today_reviews = (
+        db.query(Review)
+        .filter(func.date(Review.created_at) == today)
+        .all()
+    )
+    review_count_today = len(today_reviews)
+    avg_sentiment_today = (
+        round(sum(r.sentiment_score for r in today_reviews) / review_count_today, 2)
+        if review_count_today > 0
+        else 0.0
+    )
+
+    # Popular dishes today (from order lines)
+    popular_dishes_today = top_dishes(db, limit=5, range_key="today")
+
+    # Calculate paid vs unpaid for today
+    paid_today = 0.0
+    unpaid_today = 0.0
+    tax_today = 0.0
+    for header in today_headers:
+        tax_today += float(header.tax_amount or 0)
+        if header.payment_status == "paid":
+            paid_today += float(header.total_amount or 0)
+        else:
+            unpaid_today += float(header.total_amount or 0)
+
+    # Also include legacy orders payment status (unknown, treat as unpaid)
+    for order in today_legacy_orders:
+        unpaid_today += float(order.total_price or 0)
+
+    # Gross sales = sum of all order totals (headers + legacy)
+    gross_today = today_money["revenue"]
+
+    # Subtotal = gross - tax (for headers only, legacy doesn't have tax breakdown)
+    subtotal_today = round(gross_today - tax_today, 2)
+
+    return {
+        "date": today.isoformat(),
+        "sales": {
+            "gross": round(gross_today, 2),
+            "subtotal": subtotal_today,
+            "tax": round(tax_today, 2),
+            "paid": round(paid_today, 2),
+            "unpaid": round(unpaid_today, 2),
+        },
+        "orders": {
+            "total": today_money["orders"],
+            "placed": today_lifecycle.get("Placed", 0),
+            "confirmed": today_lifecycle.get("Confirmed", 0),
+            "preparing": today_lifecycle.get("Preparing", 0),
+            "ready": today_lifecycle.get("Ready", 0),
+            "served": today_lifecycle.get("Served", 0),
+            "cancelled": today_lifecycle.get("Cancelled", 0),
+        },
+        "reservations": {
+            "total": len(today_reservations),
+            "pending": reservation_status_counts.get("Pending", 0),
+            "confirmed": reservation_status_counts.get("Booked", 0),
+            "completed": reservation_status_counts.get("Completed", 0),
+            "cancelled": reservation_status_counts.get("Cancelled", 0),
+        },
+        "customers": {
+            "new_today": new_customers_today,
+            "active_today": customers_with_active_orders,
+            "with_unpaid_bills": customers_with_unpaid,
+        },
+        "popular_dishes": popular_dishes_today.get("top_dishes", []),
+        "payments": {
+            "paid": today_payment.get("paid", 0),
+            "pending": today_payment.get("PENDING", 0),
+            "failed": today_payment.get("FAILED", 0),
+        },
+        "inventory": {
+            "low_stock": stock["low_stock_count"],
+            "out_of_stock": stock["out_of_stock_count"],
+        },
+        "reviews": {
+            "today": review_count_today,
+            "average_sentiment": avg_sentiment_today,
+        },
+    }
+
+
+def analytics_customer_today(db: Session, user_id: int) -> dict:
+    """
+    Detailed today's metrics for a specific customer.
+
+    All figures are derived from the database for the current restaurant date.
+    Only returns data for the authenticated customer - never exposes other
+    customers' information.
+    """
+    today = restaurant_today()
+
+    # Customer's order headers today
+    today_headers = db.query(OrderHeader).filter(
+        _daterange(OrderHeader.placed_at, today, today),
+        OrderHeader.user_id == user_id,
+    ).all()
+
+    # Customer's legacy orders today
+    today_legacy_orders = db.query(Order).filter(
+        _daterange(Order.created_at, today, today),
+        Order.order_id.is_(None),
+        Order.customer_name.isnot(None),  # legacy orders don't have user_id
+    ).all()
+
+    # Order lifecycle counts for TODAY only
+    today_lifecycle = {status: 0 for status in LIFECYCLE_STATUSES}
+    today_lifecycle["Cancelled"] = 0
+    for header in today_headers:
+        if header.status in today_lifecycle:
+            today_lifecycle[header.status] += 1
+        else:
+            today_lifecycle[header.status] = today_lifecycle.get(header.status, 0) + 1
+    for order in today_legacy_orders:
+        legacy_to_lifecycle = {
+            "Pending": "Placed",
+            "Confirmed": "Confirmed",
+            "Preparing": "Preparing",
+            "Ready": "Ready",
+            "Served": "Served",
+            "Completed": "Served",
+            "Cancelled": "Cancelled",
+        }
+        mapped = legacy_to_lifecycle.get(order.status, "Served")
+        today_lifecycle[mapped] = today_lifecycle.get(mapped, 0) + 1
+
+    # Payment status counts
+    today_payment = {}
+    for header in today_headers:
+        today_payment[header.payment_status] = today_payment.get(header.payment_status, 0) + 1
+    if today_legacy_orders:
+        today_payment["unpaid"] = today_payment.get("unpaid", 0) + len(today_legacy_orders)
+
+    # Customer's reservations today
+    today_reservations = db.query(Reservation).filter(
+        Reservation.reservation_date == today,
+        Reservation.user_id == user_id,
+    ).all()
+
+    reservation_status_counts = {}
+    for r in today_reservations:
+        reservation_status_counts[r.status] = reservation_status_counts.get(r.status, 0) + 1
+
+    # Customer's reviews today
+    today_reviews = db.query(Review).filter(
+        func.date(Review.created_at) == today,
+        Review.user_id == user_id,
+    ).all()
+    review_count_today = len(today_reviews)
+
+    # Calculate paid vs unpaid for today
+    paid_today = 0.0
+    unpaid_today = 0.0
+    tax_today = 0.0
+    for header in today_headers:
+        tax_today += float(header.tax_amount or 0)
+        if header.payment_status == "paid":
+            paid_today += float(header.total_amount or 0)
+        else:
+            unpaid_today += float(header.total_amount or 0)
+
+    for order in today_legacy_orders:
+        unpaid_today += float(order.total_price or 0)
+
+    # Gross sales = sum of all order totals (headers + legacy)
+    gross_today = sum(float(h.total_amount or 0) for h in today_headers) + sum(
+        float(o.total_price or 0) for o in today_legacy_orders
+    )
+
+    subtotal_today = round(gross_today - tax_today, 2)
+
+    # Active order (first non-completed order)
+    active_order = None
+    for header in today_headers:
+        if header.status in ACTIVE_LIFECYCLE_STATUSES:
+            active_order = {
+                "id": header.id,
+                "reference": header.reference,
+                "status": header.status,
+                "table_number": header.table_number,
+                "total_amount": float(header.total_amount or 0),
+                "currency": header.currency,
+                "placed_at": header.placed_at.isoformat() if header.placed_at else None,
+                "payment_status": header.payment_status,
+            }
+            break
+
+    # Recent activity (last 5 orders)
+    recent_orders = db.query(OrderHeader).filter(
+        OrderHeader.user_id == user_id,
+    ).order_by(OrderHeader.placed_at.desc()).limit(5).all()
+
+    recent_activity = [
+        {
+            "id": o.id,
+            "reference": o.reference,
+            "status": o.status,
+            "total_amount": float(o.total_amount or 0),
+            "currency": o.currency,
+            "placed_at": o.placed_at.isoformat() if o.placed_at else None,
+        }
+        for o in recent_orders
+    ]
+
+    return {
+        "date": today.isoformat(),
+        "orders": {
+            "total": len(today_headers) + len(today_legacy_orders),
+            "placed": today_lifecycle.get("Placed", 0),
+            "confirmed": today_lifecycle.get("Confirmed", 0),
+            "preparing": today_lifecycle.get("Preparing", 0),
+            "ready": today_lifecycle.get("Ready", 0),
+            "served": today_lifecycle.get("Served", 0),
+            "cancelled": today_lifecycle.get("Cancelled", 0),
+        },
+        "spending": {
+            "subtotal": subtotal_today,
+            "tax": round(tax_today, 2),
+            "total": round(gross_today, 2),
+            "paid": round(paid_today, 2),
+            "unpaid": round(unpaid_today, 2),
+        },
+        "reservations": {
+            "total": len(today_reservations),
+            "pending": reservation_status_counts.get("Pending", 0),
+            "confirmed": reservation_status_counts.get("Booked", 0),
+            "completed": reservation_status_counts.get("Completed", 0),
+            "cancelled": reservation_status_counts.get("Cancelled", 0),
+        },
+        "reviews": {
+            "count": review_count_today,
+        },
+        "active_order": active_order,
+        "recent_activity": recent_activity,
     }
 
 

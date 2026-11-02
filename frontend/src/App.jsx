@@ -7,9 +7,10 @@ import {
   getDashboard,
   getTopDishes,
   getWeeklyRevenue,
-  getSettings,
+  getPublicSettings,
   getAdminSettlementSummary,
   getLowStock,
+  getTodayAnalytics,
   setSessionExpiredHandler,
   clearStoredSession,
 } from "./api";
@@ -323,6 +324,9 @@ function App() {
   const [outstanding, setOutstanding] = useState(undefined);
   const [lowStockCount, setLowStockCount] = useState(undefined);
 
+  // Today's detailed analytics for the command center
+  const [todayAnalytics, setTodayAnalytics] = useState(null);
+
   const [loading, setLoading] = useState(true);
   const [verifyingSession, setVerifyingSession] = useState(
     () => Boolean(localStorage.getItem("restaurant_token"))
@@ -339,15 +343,17 @@ function App() {
 
   const loadDashboard = async () => {
     try {
-      const [data, dishes, weeklyData] = await Promise.all([
+      const [data, dishes, weeklyData, todayData] = await Promise.all([
         getDashboard(),
         getTopDishes(4),
         getWeeklyRevenue(7),
+        getTodayAnalytics(),
       ]);
 
       setDashboard(data);
       setTopDishes(dishes?.top_dishes || []);
       setWeekly(weeklyData);
+      setTodayAnalytics(todayData);
     } catch (error) {
       console.error("Dashboard error:", error);
     } finally {
@@ -441,22 +447,21 @@ function App() {
     if (user && !isCustomer) loadDashboard();
   }, [user, isCustomer]);
 
-  // Take the display currency from the backend settings row, so the
-  // symbol on screen follows the database rather than a hardcoded
-  // literal. Formatter only; it never decides an amount.
+// Take the display currency from the backend settings row, so the
+// symbol on screen follows the database rather than a hardcoded
+// literal. Formatter only; it never decides an amount. The public
+// endpoint needs no token, so guests and customers both get it.
   useEffect(() => {
-    if (!user) return;
-
-    getSettings()
+    getPublicSettings()
       .then((settings) => {
         if (settings?.currency) {
           setCurrency(settings.currency);
         }
       })
       .catch(() => {
-        // Settings is admin-only; a customer keeps the last known value.
+        // Public settings unavailable; currency stays at its default.
       });
-  }, [user, isCustomer]);
+  }, []);
 
   const handleLogout = () => {
     clearStoredSession();
@@ -614,6 +619,213 @@ function App() {
               <div className="loading-panel">Loading dashboard...</div>
             ) : dashboard ? (
               <>
+                {/* ============================================================
+                    TODAY COMMAND CENTER
+                    ============================================================ */}
+                {todayAnalytics && (
+                  <div className="today-command-center">
+                    <div className="today-header">
+                      <div className="today-title-row">
+                        <span className="today-eyebrow">TODAY AT PARADISE</span>
+                        <h2>{todayAnalytics.date}</h2>
+                        <span className="today-badge live">LIVE</span>
+                      </div>
+                    </div>
+
+                    <div className="today-stats-grid">
+                      {/* SALES */}
+                      <div className="today-stat-card today-sales">
+                        <div className="today-stat-header">
+                          <h3>SALES</h3>
+                          <span className="today-stat-label">Gross</span>
+                        </div>
+                        <div className="today-stat-value gold">
+                          {formatMoney(todayAnalytics.sales.gross)}
+                        </div>
+                        <div className="today-stat-breakdown">
+                          <div className="breakdown-item">
+                            <span className="breakdown-label">Subtotal</span>
+                            <span className="breakdown-value">{formatMoney(todayAnalytics.sales.subtotal)}</span>
+                          </div>
+                          <div className="breakdown-item">
+                            <span className="breakdown-label">Tax</span>
+                            <span className="breakdown-value">{formatMoney(todayAnalytics.sales.tax)}</span>
+                          </div>
+                          <div className="breakdown-item">
+                            <span className="breakdown-label">Paid</span>
+                            <span className="breakdown-value collected">{formatMoney(todayAnalytics.sales.paid)}</span>
+                          </div>
+                          <div className="breakdown-item">
+                            <span className="breakdown-label">Unpaid</span>
+                            <span className="breakdown-value outstanding">{formatMoney(todayAnalytics.sales.unpaid)}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* ORDERS */}
+                      <div className="today-stat-card today-orders">
+                        <div className="today-stat-header">
+                          <h3>ORDERS</h3>
+                          <span className="today-stat-label">Total: {todayAnalytics.orders.total}</span>
+                        </div>
+                        <div className="today-lifecycle">
+                          <div className="lifecycle-item">
+                            <span className="lifecycle-label">Placed</span>
+                            <span className="lifecycle-count">{todayAnalytics.orders.placed}</span>
+                          </div>
+                          <div className="lifecycle-item">
+                            <span className="lifecycle-label">Confirmed</span>
+                            <span className="lifecycle-count">{todayAnalytics.orders.confirmed}</span>
+                          </div>
+                          <div className="lifecycle-item">
+                            <span className="lifecycle-label">Preparing</span>
+                            <span className="lifecycle-count">{todayAnalytics.orders.preparing}</span>
+                          </div>
+                          <div className="lifecycle-item">
+                            <span className="lifecycle-label">Ready</span>
+                            <span className="lifecycle-count">{todayAnalytics.orders.ready}</span>
+                          </div>
+                          <div className="lifecycle-item">
+                            <span className="lifecycle-label">Served</span>
+                            <span className="lifecycle-count">{todayAnalytics.orders.served}</span>
+                          </div>
+                          <div className="lifecycle-item">
+                            <span className="lifecycle-label">Cancelled</span>
+                            <span className="lifecycle-count">{todayAnalytics.orders.cancelled}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* RESERVATIONS */}
+                      <div className="today-stat-card today-reservations">
+                        <div className="today-stat-header">
+                          <h3>RESERVATIONS</h3>
+                          <span className="today-stat-label">Total: {todayAnalytics.reservations.total}</span>
+                        </div>
+                        <div className="today-reservation-status">
+                          <div className="res-status-item">
+                            <span className="res-status-label">Pending</span>
+                            <span className="res-status-count">{todayAnalytics.reservations.pending}</span>
+                          </div>
+                          <div className="res-status-item">
+                            <span className="res-status-label">Confirmed</span>
+                            <span className="res-status-count">{todayAnalytics.reservations.confirmed}</span>
+                          </div>
+                          <div className="res-status-item">
+                            <span className="res-status-label">Completed</span>
+                            <span className="res-status-count">{todayAnalytics.reservations.completed}</span>
+                          </div>
+                          <div className="res-status-item">
+                            <span className="res-status-label">Cancelled</span>
+                            <span className="res-status-count">{todayAnalytics.reservations.cancelled}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* CUSTOMERS */}
+                      <div className="today-stat-card today-customers">
+                        <div className="today-stat-header">
+                          <h3>CUSTOMERS</h3>
+                          <span className="today-stat-label">New Today</span>
+                        </div>
+                        <div className="today-customer-metrics">
+                          <div className="customer-metric">
+                            <span className="customer-label">New</span>
+                            <span className="customer-count">{todayAnalytics.customers.new_today}</span>
+                          </div>
+                          <div className="customer-metric">
+                            <span className="customer-label">Active</span>
+                            <span className="customer-count">{todayAnalytics.customers.active_today}</span>
+                          </div>
+                          <div className="customer-metric">
+                            <span className="customer-label">Unpaid Bills</span>
+                            <span className="customer-count">{todayAnalytics.customers.with_unpaid_bills}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* POPULAR DISHES */}
+                      <div className="today-stat-card today-popular">
+                        <div className="today-stat-header">
+                          <h3>POPULAR TODAY</h3>
+                        </div>
+                        <div className="today-popular-list">
+                          {todayAnalytics.popular_dishes.length > 0 ? (
+                            todayAnalytics.popular_dishes.slice(0, 5).map((dish, idx) => (
+                              <div key={idx} className="popular-dish-row">
+                                <span className="popular-rank">#{idx + 1}</span>
+                                <span className="popular-name">{dish.dish}</span>
+                                <span className="popular-qty">{dish.quantity_sold} sold</span>
+                                <span className="popular-rev">{formatMoney(dish.revenue)}</span>
+                              </div>
+                            ))
+                          ) : (
+                            <span className="empty-note">No dishes sold today</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* PAYMENTS */}
+                      <div className="today-stat-card today-payments">
+                        <div className="today-stat-header">
+                          <h3>PAYMENTS</h3>
+                        </div>
+                        <div className="today-payment-status">
+                          <div className="payment-status-item paid">
+                            <span className="payment-label">Paid</span>
+                            <span className="payment-count">{todayAnalytics.payments.paid}</span>
+                          </div>
+                          <div className="payment-status-item pending">
+                            <span className="payment-label">Pending</span>
+                            <span className="payment-count">{todayAnalytics.payments.pending}</span>
+                          </div>
+                          <div className="payment-status-item failed">
+                            <span className="payment-label">Failed</span>
+                            <span className="payment-count">{todayAnalytics.payments.failed}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* INVENTORY */}
+                      <div className="today-stat-card today-inventory">
+                        <div className="today-stat-header">
+                          <h3>INVENTORY</h3>
+                        </div>
+                        <div className="today-inventory-status">
+                          <div className="inv-status-item ok">
+                            <span className="inv-label">Available</span>
+                            <span className="inv-count">{todayAnalytics.inventory.low_stock + todayAnalytics.inventory.out_of_stock}</span>
+                          </div>
+                          <div className="inv-status-item warn">
+                            <span className="inv-label">Low Stock</span>
+                            <span className="inv-count">{todayAnalytics.inventory.low_stock}</span>
+                          </div>
+                          <div className="inv-status-item danger">
+                            <span className="inv-label">Out of Stock</span>
+                            <span className="inv-count">{todayAnalytics.inventory.out_of_stock}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* REVIEWS */}
+                      <div className="today-stat-card today-reviews">
+                        <div className="today-stat-header">
+                          <h3>REVIEWS</h3>
+                        </div>
+                        <div className="today-review-summary">
+                          <div className="review-metric">
+                            <span className="review-label">Today</span>
+                            <span className="review-count">{todayAnalytics.reviews.today}</span>
+                          </div>
+                          <div className="review-metric">
+                            <span className="review-label">Avg Sentiment</span>
+                            <span className="review-count">{todayAnalytics.reviews.average_sentiment.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="stats-grid dashboard-stats">
 <div className="stat-card is-focus">
                     <h3>Revenue</h3>
