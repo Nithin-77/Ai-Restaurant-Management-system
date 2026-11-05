@@ -6,149 +6,158 @@
 // back to a matching stock photo when a dish has no image yet.
 
 const API_BASE =
-  import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+  import.meta.env.VITE_API_URL;
 
 // Cache-busting version for menu images.
 // Increment this when images are replaced so browsers fetch the new versions.
-const IMAGE_VERSION = "3";
+const IMAGE_VERSION = "5";
 
 // Local fallback image for dishes without an image.
 export const FALLBACK_DISH_IMAGE = "/images/menu/fallback.svg";
 
-// Images used when an admin saves a dish without picking a photo.
+// Images for the 80 famous menu items (Paradise Restaurant Premium Menu).
 // All 80 menu items have unique local images organized by category.
+// Format: dishName -> "/images/menu/<category>/<slug>.webp"
 export const DISH_IMAGE_LIBRARY = {
-  // Veg (20 items)
-  "Vegetable Dum Biryani": "/images/menu/veg/vegetable-dum-biryani.jpg",
-  "Paneer Butter Masala": "/images/menu/veg/paneer-butter-masala.jpg",
-  "Paneer Tikka Masala": "/images/menu/veg/paneer-tikka-masala.jpg",
-  "Palak Paneer": "/images/menu/veg/palak-paneer.jpg",
-  "Vegetable Korma": "/images/menu/veg/vegetable-korma.jpg",
-  "Malai Kofta": "/images/menu/veg/malai-kofta.jpg",
-  "Chana Masala": "/images/menu/veg/chana-masala.jpg",
-  "Dal Makhani": "/images/menu/veg/dal-makhani.jpg",
-  "Vegetable Fried Rice": "/images/menu/veg/vegetable-fried-rice.jpg",
-  "Jeera Rice": "/images/menu/veg/jeera-rice.jpg",
-  "Veg Pulao": "/images/menu/veg/veg-pulao.jpg",
-  "Aloo Gobi": "/images/menu/veg/aloo-gobi.jpg",
-  "Bhindi Masala": "/images/menu/veg/bhindi-masala.jpg",
-  "Mushroom Masala": "/images/menu/veg/mushroom-masala.jpg",
-  "Kadai Paneer": "/images/menu/veg/kadai-paneer.jpg",
-  "Navratan Korma": "/images/menu/veg/navratan-korma.jpg",
-  "Paneer Bhurji": "/images/menu/veg/paneer-bhurji.jpg",
-  "Vegetable Jalfrezi": "/images/menu/veg/vegetable-jalfrezi.jpg",
-  "Corn Palak": "/images/menu/veg/corn-palak.jpg",
-  "Gobi Manchurian": "/images/menu/veg/gobi-manchurian.jpg",
+  // Vegetarian (20 items)
+  "Paneer Butter Masala": "/images/menu/veg/paneer-butter-masala.webp",
+  "Kadai Paneer": "/images/menu/veg/kadai-paneer.webp",
+  "Shahi Paneer": "/images/menu/veg/shahi-paneer.webp",
+  "Palak Paneer": "/images/menu/veg/palak-paneer.webp",
+  "Paneer Tikka Masala": "/images/menu/veg/paneer-tikka-masala.webp",
+  "Malai Kofta": "/images/menu/veg/malai-kofta.webp",
+  "Dal Makhani": "/images/menu/veg/dal-makhani.webp",
+  "Chana Masala": "/images/menu/veg/chana-masala.webp",
+  "Aloo Gobi": "/images/menu/veg/aloo-gobi.webp",
+  "Veg Kolhapuri": "/images/menu/veg/veg-kolhapuri.webp",
+  "Vegetable Biryani": "/images/menu/veg/vegetable-biryani.webp",
+  "Veg Pulao": "/images/menu/veg/veg-pulao.webp",
+  "Gobi Manchurian": "/images/menu/veg/gobi-manchurian.webp",
+  "Mushroom Masala": "/images/menu/veg/mushroom-masala.webp",
+  "Navratan Korma": "/images/menu/veg/navratan-korma.webp",
+  "Paneer Tikka": "/images/menu/veg/paneer-tikka.webp",
+  "Hara Bhara Kebab": "/images/menu/veg/hara-bhara-kebab.webp",
+  "Masala Dosa": "/images/menu/veg/masala-dosa.webp",
+  "Veg Fried Rice": "/images/menu/veg/veg-fried-rice.webp",
+  "Stuffed Cheese Naan": "/images/menu/veg/stuffed-cheese-naan.webp",
 
-  // Non-Veg (20 items)
-  "Hyderabadi Chicken Dum Biryani": "/images/menu/non-veg/hyderabadi-chicken-dum-biryani.jpg",
-  "Chicken Butter Masala": "/images/menu/non-veg/chicken-butter-masala.jpg",
-  "Chicken Tikka Masala": "/images/menu/non-veg/chicken-tikka-masala.jpg",
-  "Chicken Korma": "/images/menu/non-veg/chicken-korma.jpg",
-  "Chicken Chettinad": "/images/menu/non-veg/chicken-chettinad.jpg",
-  "Mutton Rogan Josh": "/images/menu/non-veg/mutton-rogan-josh.jpg",
-  "Mutton Biryani": "/images/menu/non-veg/mutton-biryani.jpg",
-  "Fish Curry": "/images/menu/non-veg/fish-curry.jpg",
-  "Prawn Masala": "/images/menu/non-veg/prawn-masala.jpg",
-  "Chicken 65": "/images/menu/non-veg/chicken-65.jpg",
-  "Tandoori Chicken": "/images/menu/non-veg/tandoori-chicken.jpg",
-  "Chicken Lollipop": "/images/menu/non-veg/chicken-lollipop.jpg",
-  "Mutton Kheema": "/images/menu/non-veg/mutton-kheema.jpg",
-  "Chicken Kolhapuri": "/images/menu/non-veg/chicken-kolhapuri.jpg",
-  "Amritsari Fish": "/images/menu/non-veg/amritsari-fish.jpg",
-  "Chicken Saagwala": "/images/menu/non-veg/chicken-saagwala.jpg",
-  "Egg Curry": "/images/menu/non-veg/egg-curry.jpg",
-  "Mutton Korma": "/images/menu/non-veg/mutton-korma.jpg",
-  "Chicken Vindaloo": "/images/menu/non-veg/chicken-vindaloo.jpg",
-  "Fish Tikka": "/images/menu/non-veg/fish-tikka.jpg",
+  // Non-Vegetarian (20 items)
+  "Hyderabadi Chicken Dum Biryani": "/images/menu/non-veg/hyderabadi-chicken-dum-biryani.webp",
+  "Chicken 65": "/images/menu/non-veg/chicken-65.webp",
+  "Butter Chicken": "/images/menu/non-veg/butter-chicken.webp",
+  "Chicken Tikka Masala": "/images/menu/non-veg/chicken-tikka-masala.webp",
+  "Tandoori Chicken": "/images/menu/non-veg/tandoori-chicken.webp",
+  "Chicken Chettinad": "/images/menu/non-veg/chicken-chettinad.webp",
+  "Chicken Lollipop": "/images/menu/non-veg/chicken-lollipop.webp",
+  "Chicken Korma": "/images/menu/non-veg/chicken-korma.webp",
+  "Chicken Kolhapuri": "/images/menu/non-veg/chicken-kolhapuri.webp",
+  "Chicken Shawarma": "/images/menu/non-veg/chicken-shawarma.webp",
+  "Mutton Biryani": "/images/menu/non-veg/mutton-biryani.webp",
+  "Mutton Rogan Josh": "/images/menu/non-veg/mutton-rogan-josh.webp",
+  "Mutton Kheema": "/images/menu/non-veg/mutton-kheema.webp",
+  "Mutton Korma": "/images/menu/non-veg/mutton-korma.webp",
+  "Fish Curry": "/images/menu/non-veg/fish-curry.webp",
+  "Amritsari Fish Fry": "/images/menu/non-veg/amritsari-fish-fry.webp",
+  "Fish Tikka": "/images/menu/non-veg/fish-tikka.webp",
+  "Prawn Masala": "/images/menu/non-veg/prawn-masala.webp",
+  "Prawn Fry": "/images/menu/non-veg/prawn-fry.webp",
+  "Egg Curry": "/images/menu/non-veg/egg-curry.webp",
 
   // Desserts (20 items)
-  "Gulab Jamun": "/images/menu/desserts/gulab-jamun.jpg",
-  "Rasmalai": "/images/menu/desserts/rasmalai.jpg",
-  "Kesar Kulfi": "/images/menu/desserts/kesar-kulfi.jpg",
-  "Gajar Ka Halwa": "/images/menu/desserts/gajar-ka-halwa.jpg",
-  "Shahi Tukda": "/images/menu/desserts/shahi-tukda.jpg",
-  "Kaju Katli": "/images/menu/desserts/kaju-katli.jpg",
-  "Rasgulla": "/images/menu/desserts/rasgulla.jpg",
-  "Mysore Pak": "/images/menu/desserts/mysore-pak.jpg",
-  "Phirni": "/images/menu/desserts/phirni.jpg",
-  "Jalebi": "/images/menu/desserts/jalebi.jpg",
-  "Malpua": "/images/menu/desserts/malpua.jpg",
-  "Kheer": "/images/menu/desserts/kheer.jpg",
-  "Sandesh": "/images/menu/desserts/sandesh.jpg",
-  "Cham Cham": "/images/menu/desserts/cham-cham.jpg",
-  "Peda": "/images/menu/desserts/peda.jpg",
-  "Modak": "/images/menu/desserts/modak.jpg",
-  "Besan Ladoo": "/images/menu/desserts/besan-ladoo.jpg",
-  "Coconut Barfi": "/images/menu/desserts/coconut-barfi.jpg",
-  "Anjeer Halwa": "/images/menu/desserts/anjeer-halwa.jpg",
-  "Chocolate Brownie": "/images/menu/desserts/chocolate-brownie.jpg",
+  "Gulab Jamun": "/images/menu/desserts/gulab-jamun.webp",
+  "Rasmalai": "/images/menu/desserts/rasmalai.webp",
+  "Gajar Ka Halwa": "/images/menu/desserts/gajar-ka-halwa.webp",
+  "Kaju Katli": "/images/menu/desserts/kaju-katli.webp",
+  "Jalebi": "/images/menu/desserts/jalebi.webp",
+  "Rabri": "/images/menu/desserts/rabri.webp",
+  "Kulfi": "/images/menu/desserts/kulfi.webp",
+  "Falooda": "/images/menu/desserts/falooda.webp",
+  "Moong Dal Halwa": "/images/menu/desserts/moong-dal-halwa.webp",
+  "Double Ka Meetha": "/images/menu/desserts/double-ka-meetha.webp",
+  "Shahi Tukda": "/images/menu/desserts/shahi-tukda.webp",
+  "Rasgulla": "/images/menu/desserts/rasgulla.webp",
+  "Carrot Cake": "/images/menu/desserts/carrot-cake.webp",
+  "Chocolate Brownie": "/images/menu/desserts/chocolate-brownie.webp",
+  "Chocolate Lava Cake": "/images/menu/desserts/chocolate-lava-cake.webp",
+  "Cheesecake": "/images/menu/desserts/cheesecake.webp",
+  "Ice Cream Sundae": "/images/menu/desserts/ice-cream-sundae.webp",
+  "Fruit Custard": "/images/menu/desserts/fruit-custard.webp",
+  "Kheer": "/images/menu/desserts/kheer.webp",
+  "Pista Kulfi": "/images/menu/desserts/pista-kulfi.webp",
 
   // Cool Drinks (20 items)
-  "Mango Lassi": "/images/menu/drinks/mango-lassi.jpg",
-  "Sweet Lassi": "/images/menu/drinks/sweet-lassi.jpg",
-  "Salted Lassi": "/images/menu/drinks/salted-lassi.jpg",
-  "Masala Chaas": "/images/menu/drinks/masala-chaas.jpg",
-  "Fresh Lime Soda": "/images/menu/drinks/fresh-lime-soda.jpg",
-  "Watermelon Juice": "/images/menu/drinks/watermelon-juice.jpg",
-  "Orange Juice": "/images/menu/drinks/orange-juice.jpg",
-  "Pineapple Juice": "/images/menu/drinks/pineapple-juice.jpg",
-  "Mix Fruit Juice": "/images/menu/drinks/mix-fruit-juice.jpg",
-  "Cold Coffee": "/images/menu/drinks/cold-coffee.jpg",
-  "Chocolate Milkshake": "/images/menu/drinks/chocolate-milkshake.jpg",
-  "Strawberry Milkshake": "/images/menu/drinks/strawberry-milkshake.jpg",
-  "Vanilla Milkshake": "/images/menu/drinks/vanilla-milkshake.jpg",
-  "Oreo Milkshake": "/images/menu/drinks/oreo-milkshake.jpg",
-  "Mango Milkshake": "/images/menu/drinks/mango-milkshake.jpg",
-  "Virgin Mojito": "/images/menu/drinks/virgin-mojito.jpg",
-  "Blue Lagoon": "/images/menu/drinks/blue-lagoon.jpg",
-  "Cranberry Cooler": "/images/menu/drinks/cranberry-cooler.jpg",
-  "Iced Tea": "/images/menu/drinks/iced-tea.jpg",
-  "Rose Falooda": "/images/menu/drinks/rose-falooda.jpg",
+  "Fresh Lime Soda": "/images/menu/cool-drinks/fresh-lime-soda.webp",
+  "Mango Milkshake": "/images/menu/cool-drinks/mango-milkshake.webp",
+  "Chocolate Milkshake": "/images/menu/cool-drinks/chocolate-milkshake.webp",
+  "Oreo Milkshake": "/images/menu/cool-drinks/oreo-milkshake.webp",
+  "Strawberry Milkshake": "/images/menu/cool-drinks/strawberry-milkshake.webp",
+  "Vanilla Milkshake": "/images/menu/cool-drinks/vanilla-milkshake.webp",
+  "Cold Coffee": "/images/menu/cool-drinks/cold-coffee.webp",
+  "Iced Tea": "/images/menu/cool-drinks/iced-tea.webp",
+  "Lemon Iced Tea": "/images/menu/cool-drinks/lemon-iced-tea.webp",
+  "Watermelon Juice": "/images/menu/cool-drinks/watermelon-juice.webp",
+  "Orange Juice": "/images/menu/cool-drinks/orange-juice.webp",
+  "Pineapple Juice": "/images/menu/cool-drinks/pineapple-juice.webp",
+  "Sweet Lassi": "/images/menu/cool-drinks/sweet-lassi.webp",
+  "Mango Lassi": "/images/menu/cool-drinks/mango-lassi.webp",
+  "Rose Milk": "/images/menu/cool-drinks/rose-milk.webp",
+  "Badam Milk": "/images/menu/cool-drinks/badam-milk.webp",
+  "Buttermilk": "/images/menu/cool-drinks/buttermilk.webp",
+  "Mojito (non-alcoholic)": "/images/menu/cool-drinks/mojito.webp",
+  "Blue Lagoon (non-alcoholic)": "/images/menu/cool-drinks/blue-lagoon.webp",
+  "Tender Coconut Water": "/images/menu/cool-drinks/tender-coconut-water.webp",
 
-  // Legacy items for backward compatibility (names not in the main 80)
-  "Chicken Biryani": "/images/menu/non-veg/hyderabadi-chicken-dum-biryani.jpg",
-  "Butter Chicken": "/images/menu/non-veg/chicken-butter-masala.jpg",
-  "Veg Fried Rice": "/images/menu/veg/vegetable-fried-rice.jpg",
-  "Masala Dosa": "/images/menu/veg/veg-pulao.jpg",
-  "Idli Sambar": "/images/menu/veg/aloo-gobi.jpg",
-  "Filter Coffee": "/images/menu/drinks/cold-coffee.jpg",
-  "Veg Samosa": "/images/menu/veg/veg-pulao.jpg",
-  "Choco Brownie": "/images/menu/desserts/chocolate-brownie.jpg",
-  "Margherita Pizza": "/images/menu/veg/veg-pulao.jpg",
-  "Pepperoni Pizza": "/images/menu/non-veg/chicken-tikka-masala.jpg",
-  "Garlic Bread": "/images/menu/veg/veg-pulao.jpg",
-  "Caesar Salad": "/images/menu/veg/bhindi-masala.jpg",
-  "Tiramisu": "/images/menu/desserts/chocolate-brownie.jpg",
-  "Cappuccino": "/images/menu/drinks/cold-coffee.jpg",
-  "Milkshake": "/images/menu/drinks/vanilla-milkshake.jpg",
+  // Legacy items for backward compatibility
+  // Only include mappings that don't conflict with the 80 main items above
+  "Vegetable Dum Biryani": "/images/menu/veg/veg-biryani.webp",
+  "Vegetable Fried Rice": "/images/menu/veg/veg-fried-rice.webp",
+  "Vegetable Korma": "/images/menu/veg/veg-kolhapuri.webp",
+  "Jeera Rice": "/images/menu/veg/jeera-rice.webp",
+  "Bhindi Masala": "/images/menu/veg/bhindi-masala.webp",
+  "Vegetable Jalfrezi": "/images/menu/veg/veg-jalfrezi.webp",
+  "Corn Palak": "/images/menu/veg/corn-palak.webp",
+  "Paneer Bhurji": "/images/menu/veg/paneer-bhurji.webp",
+  "Chicken Butter Masala": "/images/menu/non-veg/butter-chicken.webp",
+  "Amritsari Fish": "/images/menu/non-veg/amritsari-fish-fry.webp",
+  "Chicken Saagwala": "/images/menu/non-veg/chicken-saagwala.webp",
+  "Chicken Vindaloo": "/images/menu/non-veg/chicken-vindaloo.webp",
+  "Kesar Kulfi": "/images/menu/desserts/kulfi.webp",
+  "Besan Ladoo": "/images/menu/desserts/besan-ladoo.webp",
+  "Coconut Barfi": "/images/menu/desserts/coconut-barfi.webp",
+  "Anjeer Halwa": "/images/menu/desserts/anjeer-halwa.webp",
+  "Modak": "/images/menu/desserts/modak.webp",
+  "Peda": "/images/menu/desserts/peda.webp",
+  "Cham Cham": "/images/menu/desserts/cham-cham.webp",
+  "Sandesh": "/images/menu/desserts/sandesh.webp",
+  "Blue Lagoon": "/images/menu/cool-drinks/blue-lagoon.webp",
+  "Mix Fruit Juice": "/images/menu/cool-drinks/mixed-fruit-juice.webp",
+  "Iced Tea": "/images/menu/cool-drinks/iced-tea.webp",
+  "Vanilla Milkshake": "/images/menu/cool-drinks/vanilla-milkshake.webp",
+  "Cranberry Cooler": "/images/menu/cool-drinks/cranberry-cooler.webp",
 };
 
-// Keywords used to guess a photo for an unknown dish name.
 const KEYWORD_IMAGES = [
-  ["biryani", "/images/menu/veg/vegetable-dum-biryani.jpg"],
-  ["pizza", "/images/menu/veg/veg-pulao.jpg"],
-  ["burger", "/images/menu/non-veg/chicken-tikka-masala.jpg"],
-  ["pasta", "/images/menu/veg/vegetable-jalfrezi.jpg"],
-  ["salad", "/images/menu/veg/bhindi-masala.jpg"],
-  ["soup", "/images/menu/veg/dal-makhani.jpg"],
-  ["dessert", "/images/menu/desserts/gulab-jamun.jpg"],
-  ["cake", "/images/menu/desserts/chocolate-brownie.jpg"],
-  ["coffee", "/images/menu/drinks/cold-coffee.jpg"],
-  ["tea", "/images/menu/drinks/iced-tea.jpg"],
-  ["juice", "/images/menu/drinks/mango-lassi.jpg"],
-  ["rice", "/images/menu/veg/jeera-rice.jpg"],
-  ["chicken", "/images/menu/non-veg/chicken-butter-masala.jpg"],
-  ["fish", "/images/menu/non-veg/fish-curry.jpg"],
-  ["dosa", "/images/menu/veg/veg-pulao.jpg"],
-  ["lassi", "/images/menu/drinks/mango-lassi.jpg"],
-  ["milkshake", "/images/menu/drinks/vanilla-milkshake.jpg"],
-  ["mocktail", "/images/menu/drinks/virgin-mojito.jpg"],
-  ["falooda", "/images/menu/drinks/rose-falooda.jpg"],
+  ["biryani", "/images/menu/veg/veg-biryani.webp"],
+  ["pizza", "/images/menu/veg/veg-pizza.webp"],
+  ["burger", "/images/menu/non-veg/chicken-burger.webp"],
+  ["pasta", "/images/menu/veg/veg-noodles.webp"],
+  ["salad", "/images/menu/veg/veg-pulao.webp"],
+  ["soup", "/images/menu/veg/dal-makhani.webp"],
+  ["dessert", "/images/menu/desserts/chocolate-brownie.webp"],
+  ["cake", "/images/menu/desserts/chocolate-cake.webp"],
+  ["coffee", "/images/menu/drinks/cold-coffee.webp"],
+  ["tea", "/images/menu/drinks/iced-lemon-tea.webp"],
+  ["juice", "/images/menu/drinks/mango-juice.webp"],
+  ["rice", "/images/menu/veg/veg-pulao.webp"],
+  ["chicken", "/images/menu/non-veg/chicken-curry.webp"],
+  ["fish", "/images/menu/non-veg/fish-curry.webp"],
+  ["dosa", "/images/menu/veg/masala-dosa.webp"],
+  ["lassi", "/images/menu/drinks/mango-lassi.webp"],
+  ["milkshake", "/images/menu/drinks/vanilla-milkshake.webp"],
+  ["mocktail", "/images/menu/drinks/mojito.webp"],
+  ["falooda", "/images/menu/drinks/falooda.webp"],
 ];
 
-// Turns an uploaded file path such as "/static/menu/ab12.png" into
-// an absolute URL the browser can load.
 export const resolveImageUrl = (imageUrl) => {
   if (!imageUrl) {
     return "";
@@ -158,7 +167,6 @@ export const resolveImageUrl = (imageUrl) => {
     return imageUrl;
   }
 
-  // Local paths under /images/menu/ are served from the frontend public dir
   if (imageUrl.startsWith("/images/")) {
     const separator = imageUrl.includes("?") ? "&" : "?";
     return `${imageUrl}${separator}v=${IMAGE_VERSION}`;
@@ -171,7 +179,6 @@ export const resolveImageUrl = (imageUrl) => {
   return imageUrl;
 };
 
-// Accepts a menu item or a bare dish name and returns a usable URL.
 export const getDishImage = (source) => {
   const name =
     typeof source === "string"
@@ -203,8 +210,6 @@ export const getDishImage = (source) => {
   return FALLBACK_DISH_IMAGE;
 };
 
-// A menu item may declare is_vegetarian; older rows do not, so fall
-// back to reading the dish name.
 export const isVegItem = (item) => {
   if (typeof item?.is_vegetarian === "boolean") {
     return item.is_vegetarian;

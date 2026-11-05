@@ -16,4 +16,7 @@ existing_pythonpath = os.environ.get("PYTHONPATH", "")
 os.environ["PYTHONPATH"] = f"{ROOT_DIR};{CURRENT_DIR};{existing_pythonpath}"
 
 if __name__ == "__main__":
-    uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, reload=True)
+    host = "0.0.0.0"
+    port = int(os.environ.get("PORT", "8000"))
+    reload = os.environ.get("ENVIRONMENT", "development").strip().lower() != "production"
+    uvicorn.run("backend.main:app", host=host, port=port, reload=reload)

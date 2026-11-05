@@ -1,0 +1,51 @@
+services:
+  - type: web
+    name: paradise-backend
+    env: python
+    rootDir: backend
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: DATABASE_URL
+        description: MySQL 8 connection string (required)
+        required: true
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ENVIRONMENT
+        value: production
+      - key: CORS_ORIGINS
+        description: Comma-separated list of allowed frontend origins (required)
+        required: true
+      - key: PAYMENT_MODE
+        value: development
+      - key: PAYMENT_PROVIDER
+        value: development
+      - key: PAYMENT_MERCHANT_VPA
+        value: demo@upi
+      - key: PAYMENT_MERCHANT_NAME
+        value: Paradise Restaurant
+      - key: PAYMENT_NOTE_PREFIX
+        value: Paradise Restaurant order
+      - key: ALLOW_LIVE_PAYMENTS
+        value: false
+      - key: RAZORPAY_KEY_ID
+        description: Razorpay key ID (required for test/live payment mode)
+        required: false
+      - key: RAZORPAY_KEY_SECRET
+        description: Razorpay key secret (required for test/live payment mode)
+        required: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        description: Razorpay webhook secret (required for test/live payment mode)
+        required: false
+    healthCheckPath: /health
+
+  - type: web
+    name: paradise-frontend
+    env: static
+    rootDir: frontend
+    buildCommand: "npm install && npm run build"
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        description: Production backend URL (e.g., https://paradise-backend.onrender.com)
+        required: true
