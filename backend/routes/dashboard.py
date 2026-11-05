@@ -88,10 +88,10 @@ def get_weekly_revenue(
     db: Session = Depends(get_db),
     current_admin=Depends(require_admin),
 ):
-    from datetime import date, timedelta
+    from utils.timezone import restaurant_today
 
     days = max(2, min(int(days or 7), 90))
-    today = date.today()
+    today = restaurant_today()
     start = today - timedelta(days=days - 1)
 
     rows = (

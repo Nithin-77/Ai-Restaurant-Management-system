@@ -17,10 +17,10 @@ from sqlalchemy.orm import Session
 
 try:
     from database import get_db
-    from middleware.auth import require_admin
+    from middleware.auth import require_admin, require_customer
 except (ImportError, ValueError):
     from ..database import get_db
-    from ..middleware.auth import require_admin
+    from ..middleware.auth import require_admin, require_customer
 
 from crud import (
     get_total_revenue,
@@ -175,6 +175,42 @@ def read_overview(
     as paid on the strength of having been served.
     """
     return analytics.analytics_overview(db)
+
+
+# =========================================================
+# TODAY'S DETAILED ANALYTICS
+# =========================================================
+
+@router.get("/today")
+def read_today_analytics(
+    db: Session = Depends(get_db),
+    current_admin=Depends(require_admin),
+):
+    """
+    Comprehensive today's metrics for the command center.
+
+    All figures are derived from the database for the current restaurant date.
+    """
+    return analytics.analytics_today(db)
+
+
+# =========================================================
+# CUSTOMER TODAY ANALYTICS
+# =========================================================
+
+@router.get("/customer/today")
+def read_customer_today_analytics(
+    db: Session = Depends(get_db),
+    current_customer=Depends(require_customer),
+):
+    """
+    Today's metrics for the authenticated customer.
+
+    All figures are derived from the database for the current restaurant date.
+    Only returns data for the authenticated customer - never exposes other
+    customers' information.
+    """
+    return analytics.analytics_customer_today(db, current_customer["user_id"])
 
 
 # =========================================================

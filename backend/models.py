@@ -59,6 +59,45 @@ class Menu(Base):
 
 
 # =========================================================
+# MENU CUSTOMIZATION
+# =========================================================
+#
+# Defines extra ingredients/portions a customer can add to a dish.
+# Each customization maps to an inventory item so the cost is
+# derived from actual purchase prices, not hardcoded surcharges.
+
+class MenuCustomization(Base):
+    __tablename__ = "menu_customizations"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # The menu item this customization applies to
+    menu_id = Column(Integer, ForeignKey("menu.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    # Human-readable label shown to the customer, e.g. "Extra Chicken Leg Piece"
+    label = Column(String(100), nullable=False)
+
+    # The inventory item this customization draws from
+    inventory_id = Column(Integer, ForeignKey("inventory.id", ondelete="RESTRICT"), nullable=False, index=True)
+
+    # How many units of the inventory item per customization portion
+    # e.g. 1 leg piece, 50g paneer, 30ml extra sauce
+    quantity_per_portion = Column(Float, nullable=False, default=1.0)
+
+    # Unit of the quantity (piece, gram, ml, etc.) for display
+    unit = Column(String(30), nullable=False, default="piece")
+
+    # Maximum portions a customer can add (e.g. max 3 extra leg pieces)
+    max_portions = Column(Integer, default=3)
+
+    # Whether this customization is currently available
+    available = Column(Boolean, default=True)
+
+    # Display order when multiple customizations exist for a dish
+    sort_order = Column(Integer, default=0)
+
+
+# =========================================================
 # ORDER
 # =========================================================
 
@@ -92,6 +131,11 @@ class Order(Base):
     # Per dish request typed by the customer, e.g. "extra salt",
     # "less spicy". The kitchen ticket copies this through.
     special_instructions = Column(Text, nullable=True)
+
+    # JSON array of customizations applied to this order line.
+    # Each entry: {customization_id, label, portions, unit,
+    # extra_charge_per_portion, extra_charge_total, inventory_id, inventory_name}
+    customizations = Column(JSON, nullable=True)
 
     # Thumbnail of the dish at the time the order was placed
     image_url = Column(String(255), nullable=True)

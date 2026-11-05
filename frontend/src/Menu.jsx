@@ -12,21 +12,19 @@ import {
 } from "./api";
 
 import {
- getDishImage,
- resolveImageUrl,
- DISH_IMAGE_LIBRARY,
- spiceLabel,
+  getDishImage,
+  resolveImageUrl,
+  DISH_IMAGE_LIBRARY,
+  spiceLabel,
+  FALLBACK_DISH_IMAGE,
 } from "./dishImages";
 import { formatMoney } from "./money";
 
 const DEFAULT_CATEGORIES = [
- "Starter",
- "Main Course",
- "South Indian",
- "Dessert",
- "Beverage",
- "Appetizer",
- "Main",
+  "Veg",
+  "Non-Veg",
+  "Desserts",
+  "Cool Drinks",
 ];
 
 const SPICE_OPTIONS = [
@@ -896,11 +894,14 @@ function Menu() {
 
  <td>
  <div className="food-name-cell">
- <img
- src={getDishImage(item)}
- alt={item.name}
- className="dish-image"
- />
+<img
+  src={getDishImage(item)}
+  alt={item.name}
+  className="dish-image"
+  onError={(e) => {
+    e.currentTarget.src = FALLBACK_DISH_IMAGE;
+  }}
+/>
 
  <div className="food-name-text">
  <strong>

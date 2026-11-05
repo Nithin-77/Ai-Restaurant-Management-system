@@ -1,2 +1,2 @@
 cd "C:\Users\BUDDY\Downloads\Ai-Restaurant-Management-system-main (1) zip file\Ai-Restaurant-Management-system-main\backend"
-python main.py
+.venv\Scripts\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload

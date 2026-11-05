@@ -228,8 +228,12 @@ def food_recommendation(
 def trending_dishes(
     top_n: int = 5,
     db: Session = Depends(get_db),
-    current_user=Depends(require_current_user),
 ):
+    """
+    Public read-only list of the most-ordered dishes. No authentication
+    required - this is aggregate order data, not tied to any account.
+    Guests see the same list whether or not they are signed in.
+    """
     return {
         "popular_dishes": popular_dishes(db.query(Order).all(), top_n)
     }

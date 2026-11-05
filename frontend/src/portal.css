@@ -2718,15 +2718,469 @@
 /* ---- menu, cart, orders, bills ---- */
 
 .menu-tab-view,
-.cart-tab-view,
-.tracking-tab-view,
-.reservations-tab-view,
-.reviews-tab-view,
-.bill-tab-view,
-.loyalty-tab-view,
-.settings-tab-view,
-.overview-tab-view {
+  .cart-tab-view,
+  .tracking-tab-view,
+  .reservations-tab-view,
+  .reviews-tab-view,
+  .bill-tab-view,
+  .loyalty-tab-view,
+  .settings-tab-view,
+  .overview-tab-view {
+    animation: fade-up var(--pf-dur-slow) var(--pf-ease) both;
+  }
+
+/* =========================================================
+   TODAY AT PARADISE - Customer Portal
+   ========================================================= */
+
+.today-at-paradise {
+  margin-top: 24px;
   animation: fade-up var(--pf-dur-slow) var(--pf-ease) both;
+}
+
+.today-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--pf-line);
+}
+
+.today-eyebrow {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--pf-gold-faint);
+  border: 1px solid var(--pf-line);
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: var(--pf-gold);
+}
+
+.today-header h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 2.8vw, 2.4rem);
+  font-weight: 600;
+  color: var(--pf-text);
+}
+
+.today-badge.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--pf-ok-bg);
+  border: 1px solid var(--pf-ok);
+  color: var(--pf-ok);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.today-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.today-card {
+  background: var(--pf-surface-2);
+  border: 1px solid var(--pf-line);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: var(--pf-elev-1);
+  transition: transform 200ms var(--pf-ease), box-shadow 200ms var(--pf-ease), border-color 200ms var(--pf-ease);
+}
+
+.today-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--pf-elev-2);
+  border-color: var(--pf-line-strong);
+}
+
+.today-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.today-card-header h3 {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: var(--pf-text-3);
+}
+
+/* CURRENT ORDER */
+.today-order {
+  grid-column: span 1;
+}
+
+@media (min-width: 900px) {
+  .today-order {
+    grid-column: span 2;
+  }
+}
+
+.today-order-main {
+  margin-bottom: 16px;
+}
+
+.today-order-ref {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--pf-gold);
+  margin-bottom: 8px;
+}
+
+.today-order-status {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.today-order-status::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+  background: var(--pf-info);
+}
+
+.today-order-status.placed { background: var(--pf-info-bg); color: var(--pf-info); }
+.today-order-status.confirmed { background: var(--pf-info-bg); color: var(--pf-info); }
+.today-order-status.preparing { background: var(--pf-warn-bg); color: var(--pf-warn); }
+.today-order-status.ready { background: var(--pf-ok-bg); color: var(--pf-ok); }
+.today-order-status.served { background: var(--pf-ok-bg); color: var(--pf-ok); }
+
+.today-order-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--pf-text-2);
+}
+
+.today-order-total { color: var(--pf-gold); font-weight: 700; }
+.today-order-table { color: var(--pf-text); }
+
+.today-lifecycle-mini {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--pf-line);
+}
+
+.lifecycle-mini-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 4px;
+  opacity: 0.4;
+  transition: opacity 200ms var(--pf-ease);
+}
+
+.lifecycle-mini-step.completed {
+  opacity: 1;
+}
+
+.lifecycle-mini-step.active {
+  opacity: 1;
+}
+
+.lifecycle-mini-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--pf-line);
+  transition: background 200ms var(--pf-ease);
+}
+
+.lifecycle-mini-step.completed .lifecycle-mini-dot {
+  background: var(--pf-ok);
+  box-shadow: 0 0 8px var(--pf-ok);
+}
+
+.lifecycle-mini-step.active .lifecycle-mini-dot {
+  background: var(--pf-gold);
+  box-shadow: 0 0 8px var(--pf-gold);
+}
+
+.lifecycle-mini-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--pf-text-3);
+  font-weight: 700;
+}
+
+.lifecycle-mini-step.active .lifecycle-mini-label {
+  color: var(--pf-gold);
+}
+
+.lifecycle-mini-step.completed .lifecycle-mini-label {
+  color: var(--pf-ok);
+}
+
+/* TODAY'S SPENDING */
+.today-spending-main {
+  text-align: center;
+  padding: 8px 0 16px;
+}
+
+.today-spending-amount {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 4vw, 3.5rem);
+  font-weight: 700;
+  color: var(--pf-gold);
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.today-spending-details {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--pf-text-2);
+}
+
+.today-unpaid-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background: var(--pf-warn-bg);
+  border: 1px solid var(--pf-warn);
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.unpaid-label { color: var(--pf-warn); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; }
+.unpaid-amount { color: var(--pf-gold); font-weight: 800; font-size: 16px; }
+
+/* TODAY'S RESERVATION */
+.today-reservation-main { text-align: center; }
+
+.today-reservation-time {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 4vw, 3.5rem);
+  font-weight: 700;
+  color: var(--pf-text);
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.today-reservation-details {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--pf-text-2);
+}
+
+.res-status-pending { color: var(--pf-warn); }
+.res-status-booked { color: var(--pf-info); }
+.res-status-completed { color: var(--pf-ok); }
+.res-status-cancelled { color: var(--pf-danger); }
+
+/* AI PICK */
+.today-ai-recommendation {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ai-rec-image {
+  width: 100%;
+  aspect-ratio: 16/10;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--pf-line);
+}
+
+.ai-rec-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ai-rec-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  background: var(--pf-surface-3);
+}
+
+.ai-rec-info {
+  text-align: center;
+}
+
+.ai-rec-info h4 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--pf-text);
+}
+
+.ai-rec-price {
+  display: inline-block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--pf-gold);
+}
+
+.ai-rec-reason {
+  margin: 0;
+  font-size: 12px;
+  color: var(--pf-text-2);
+  line-height: 1.5;
+}
+
+/* POPULAR TODAY */
+.today-popular-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.popular-item {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px;
+  background: var(--pf-surface-3);
+  border: 1px solid var(--pf-line-neutral);
+  border-radius: 10px;
+}
+
+.popular-rank {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--pf-gold);
+  text-align: center;
+}
+
+.popular-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pf-text);
+}
+
+.popular-sold {
+  font-size: 11px;
+  color: var(--pf-text-3);
+}
+
+/* QUICK ACTIONS */
+.today-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+@media (min-width: 600px) {
+  .today-actions-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--pf-line);
+  background: var(--pf-surface-2);
+  color: var(--pf-text);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 200ms var(--pf-ease);
+}
+
+.action-btn:hover {
+  border-color: var(--pf-line-strong);
+  background: var(--pf-surface-3);
+  transform: translateY(-2px);
+}
+
+.action-btn.primary {
+  border-color: var(--pf-gold);
+  background: var(--pf-gold-faint);
+  color: var(--pf-gold-dark);
+}
+
+.action-btn.primary:hover {
+  background: rgba(212, 169, 92, 0.15);
+}
+
+.action-icon {
+  font-size: 20px;
+}
+
+/* EMPTY STATE */
+.today-empty {
+  text-align: center;
+  padding: 24px 16px;
+  color: var(--pf-text-3);
+}
+
+.today-empty-icon {
+  font-size: 36px;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.today-empty p {
+  margin: 0 0 16px;
+  font-size: 13px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  .today-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .today-order {
+    grid-column: span 1;
+  }
+  
+  .today-lifecycle-mini {
+    gap: 4px;
+  }
+  
+  .lifecycle-mini-label {
+    font-size: 8px;
+  }
 }
 
 /* The guest's own menu. Large photography, the dish named plainly, and a

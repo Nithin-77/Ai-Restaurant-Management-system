@@ -11,205 +11,186 @@ import random
 from database import SessionLocal
 from models import Menu
 
-# name, category, price, image, description, veg, featured, spice, prep(min)
-SAMPLE_DISHES = [
-    ("Margherita Pizza", "Main", 280,
-     "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=600&q=80",
-     "Stone-baked base, San Marzano tomato and torn mozzarella with basil.",
-     True, True, 0, 14),
-    ("Pepperoni Pizza", "Main", 340,
-     "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=600&q=80",
-     "Crisp pepperoni cups over a double mozzarella and oregano base.",
-     False, True, 1, 14),
-    ("BBQ Chicken Pizza", "Main", 380,
-     "https://images.unsplash.com/photo-1579751626657-72bc17010498?auto=format&fit=crop&w=600&q=80",
-     "Smoked barbecue chicken, red onion and sweetcorn on a thin crust.",
-     False, False, 2, 16),
-    ("Veggie Supreme", "Main", 320,
-     "https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?auto=format&fit=crop&w=600&q=80",
-     "Roast peppers, courgette, olives and artichoke with a herb dressing.",
-     True, False, 0, 15),
-    ("Four Cheese Pizza", "Main", 400,
-     "https://images.unsplash.com/photo-1548365328-8b849e6c7b26?auto=format&fit=crop&w=600&q=80",
-     "Mozzarella, gorgonzola, smoked cheddar and parmesan melted together.",
-     True, False, 0, 15),
-    ("Garlic Bread", "Appetizer", 180,
-     "https://images.unsplash.com/photo-1573140401552-3fab0b24306f?auto=format&fit=crop&w=600&q=80",
-     "Buttered baguette slices baked with garlic parsley and parmesan.",
-     True, False, 0, 8),
-    ("Bruschetta", "Appetizer", 240,
-     "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=600&q=80",
-     "Grilled sourdough topped with tomato, garlic and fresh basil.",
-     True, False, 0, 7),
-    ("Caesar Salad", "Appetizer", 300,
-     "https://images.unsplash.com/photo-1546793665-c74683f339c1?auto=format&fit=crop&w=600&q=80",
-     "Cos lettuce, shaved parmesan and croutons in a classic dressing.",
-     True, False, 0, 7),
-    ("Caprese Salad", "Appetizer", 320,
-     "https://images.unsplash.com/photo-1592417817098-8fd3d9eb14a5?auto=format&fit=crop&w=600&q=80",
-     "Tomato, buffalo mozzarella and basil with aged balsamic.",
-     True, False, 0, 7),
-    ("Greek Salad", "Appetizer", 280,
-     "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=600&q=80",
-     "Tomato, cucumber, olives and feta with oregano and olive oil.",
-     True, False, 0, 6),
-    ("Spaghetti Bolognese", "Main", 420,
-     "https://images.unsplash.com/photo-1622973536968-3ead9e780960?auto=format&fit=crop&w=600&q=80",
-     "Hand-cut spaghetti slow-cooked in a rich beef and tomato ragù.",
-     False, False, 1, 22),
-    ("Fettuccine Alfredo", "Main", 450,
-     "https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?auto=format&fit=crop&w=600&q=80",
-     "Silky ribbon pasta in a parmesan cream sauce with cracked pepper.",
-     True, False, 0, 18),
-    ("Lasagna", "Main", 480,
-     "https://images.unsplash.com/photo-1614895090293-ab1100badc2b?auto=format&fit=crop&w=600&q=80",
-     "Layered pasta sheets with beef ragù, béchamel and mozzarella.",
-     False, False, 1, 26),
-    ("Ravioli", "Main", 460,
-     "https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=600&q=80",
-     "Pasta pillows filled with ricotta and spinach in a brown butter sauce.",
-     True, False, 0, 19),
-    ("Minestrone Soup", "Appetizer", 220,
-     "https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=600&q=80",
-     "Seasonal vegetables and beans simmered in a light tomato broth.",
-     True, False, 0, 10),
-    ("Mushroom Soup", "Appetizer", 240,
-     "https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=600&q=80",
-     "Creamy woodland mushroom soup finished with chives and cream.",
-     True, False, 0, 10),
-    ("Tiramisu", "Dessert", 320,
-     "https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?auto=format&fit=crop&w=600&q=80",
-     "Espresso soaked savoiardi layered with mascarpone cream.",
-     True, True, 0, 5),
-    ("Cheesecake", "Dessert", 340,
-     "https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=600&q=80",
-     "Baked vanilla cheesecake on a biscuit base with berry coulis.",
-     True, False, 0, 5),
-    ("Chocolate Brownie", "Dessert", 250,
-     "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=600&q=80",
-     "Fudgy dark chocolate brownie served warm with vanilla cream.",
-     True, False, 0, 6),
-    ("Panna Cotta", "Dessert", 280,
-     "https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=600&q=80",
-     "Vanilla bean cream set soft, topped with a seasonal fruit coulis.",
-     True, False, 0, 4),
-    ("Lemon Sorbet", "Dessert", 180,
-     "https://images.unsplash.com/photo-1497534446932-c925b458314e?auto=format&fit=crop&w=600&q=80",
-     "Chilled lemon sorbet scooped with a mint sprig.",
-     True, False, 0, 4),
-    ("Cappuccino", "Beverage", 150,
-     "https://images.unsplash.com/photo-1572442388796-11668a67e53d?auto=format&fit=crop&w=600&q=80",
-     "Double espresso steamed milk under a thick velvet foam.",
-     True, False, 0, 3),
-    ("Espresso", "Beverage", 100,
-     "https://images.unsplash.com/photo-1510707577719-ae7c14805e3a?auto=format&fit=crop&w=600&q=80",
-     "A short, intense single-origin double shot.",
-     True, False, 0, 2),
-    ("Latte", "Beverage", 180,
-     "https://images.unsplash.com/photo-1572442388796-11668a67e53d?auto=format&fit=crop&w=600&q=80",
-     "Long espresso with textured milk, served hot or over ice.",
-     True, False, 0, 3),
-    ("Iced Tea", "Beverage", 120,
-     "https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=600&q=80",
-     "Black tea chilled over ice with lemon and a hint of mint.",
-     True, False, 0, 3),
-    ("Lemonade", "Beverage", 120,
-     "https://images.unsplash.com/photo-1621263764928-df1444c5e859?auto=format&fit=crop&w=600&q=80",
-     "Fresh pressed lemon sweetened and served over crushed ice.",
-     True, False, 0, 3),
-    ("Mojito Mocktail", "Beverage", 180,
-     "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=600&q=80",
-     "Alcohol-free lime, mint and soda with a sugar cane stirrer.",
-     True, False, 0, 5),
-    ("Chicken Wings", "Appetizer", 380,
-     "https://images.unsplash.com/photo-1604908556856-b7a6c479f62d?auto=format&fit=crop&w=600&q=80",
-     "Oven baked wings glazed in sticky hot honey and lime.",
-     False, False, 2, 20),
-    ("Fish & Chips", "Main", 420,
-     "https://images.unsplash.com/photo-1544943910-4c1dc44aab44?auto=format&fit=crop&w=600&q=80",
-     "Beer-battered fillet with hand-cut chips and mushy peas.",
-     False, False, 1, 20),
-    ("Steak Frites", "Main", 560,
-     "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=600&q=80",
-     "Grilled sirloin with crisp fries and a peppercorn sauce.",
-     False, True, 0, 25),
-    ("Chocolate Milkshake", "Beverage", 220,
-     "https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&w=600&q=80",
-     "Thick chocolate shake topped with whipped cream and cocoa.",
-     True, False, 0, 6),
-    ("Apple Pie", "Dessert", 280,
-     "https://images.unsplash.com/photo-1621743478914-cc8a86d7e7b5?auto=format&fit=crop&w=600&q=80",
-     "Shortcrust apple pie served warm with vanilla ice cream.",
-     True, False, 0, 5),
+# 80 unique local image files - one per dish, no duplicates
+# Format: (dish_name, category, price, image_filename, description, is_veg, featured, spice, prep_min)
+VEG_DISHES = [
+    ("Vegetable Dum Biryani", "Veg", 240, "vegetable-dum-biryani.jpg",
+     "Fragrant basmati layered with seasonal vegetables, mint and fried onions, slow-cooked on dum.", True, True, 1, 25),
+    ("Paneer Butter Masala", "Veg", 230, "paneer-butter-masala.jpg",
+     "Soft paneer cubes in a rich tomato and cashew gravy finished with cream and butter.", True, True, 1, 20),
+    ("Paneer Tikka Masala", "Veg", 220, "paneer-tikka-masala.jpg",
+     "Charred paneer tikka folded into a smoky onion and tomato masala with bell peppers.", True, False, 2, 22),
+    ("Palak Paneer", "Veg", 210, "palak-paneer.jpg",
+     "Fresh spinach puree simmered with paneer cubes, garlic and aromatic spices.", True, False, 1, 18),
+    ("Vegetable Korma", "Veg", 220, "vegetable-korma.jpg",
+     "Mixed vegetables in a mild cashew and coconut cream sauce with cardamom.", True, False, 1, 18),
+    ("Malai Kofta", "Veg", 240, "malai-kofta.jpg",
+     "Deep-fried paneer and potato dumplings in a velvety tomato and cashew gravy.", True, False, 1, 25),
+    ("Chana Masala", "Veg", 200, "chana-masala.jpg",
+     "Chickpeas simmered in a warm ginger and garam masala gravy with tomato.", True, False, 2, 18),
+    ("Dal Makhani", "Veg", 200, "dal-makhani.jpg",
+     "Black lentils simmered overnight on low heat with butter, cream and fenugreek.", True, False, 1, 20),
+    ("Vegetable Fried Rice", "Veg", 200, "vegetable-fried-rice.jpg",
+     "Wok-tossed rice with crisp vegetables, spring onion and a light seasoning.", True, False, 1, 15),
+    ("Jeera Rice", "Veg", 200, "jeera-rice.jpg",
+     "Basmati tempered with cumin, ghee and fresh coriander.", True, False, 0, 12),
+    ("Veg Pulao", "Veg", 200, "veg-pulao.jpg",
+     "Fragrant basmati cooked with mixed vegetables, whole spices and ghee.", True, False, 1, 20),
+    ("Aloo Gobi", "Veg", 200, "aloo-gobi.jpg",
+     "Potato and cauliflower cooked with turmeric, cumin and coriander.", True, False, 2, 15),
+    ("Bhindi Masala", "Veg", 200, "bhindi-masala.jpg",
+     "Tender okra sautéed with onions, tomatoes and aromatic spices.", True, False, 2, 15),
+    ("Mushroom Masala", "Veg", 220, "mushroom-masala.jpg",
+     "Button mushrooms in a rich onion-tomato gravy with kasuri methi.", True, False, 2, 18),
+    ("Kadai Paneer", "Veg", 230, "kadai-paneer.jpg",
+     "Paneer with bell peppers and onions in a semi-dry kadai masala.", True, True, 2, 20),
+    ("Navratan Korma", "Veg", 250, "navratan-korma.jpg",
+     "Nine vegetables, fruits and nuts in a luxurious cashew cream sauce.", True, False, 1, 22),
+    ("Paneer Bhurji", "Veg", 200, "paneer-bhurji.jpg",
+     "Crumbled paneer scrambled with onions, tomatoes, turmeric and green chilli.", True, False, 2, 12),
+    ("Vegetable Jalfrezi", "Veg", 210, "vegetable-jalfrezi.jpg",
+     "Mixed vegetables stir-fried with peppers, onions and a tangy tomato sauce.", True, False, 2, 16),
+    ("Corn Palak", "Veg", 210, "corn-palak.jpg",
+     "Sweet corn kernels in a creamy spinach gravy with garlic and cream.", True, False, 1, 18),
+    ("Gobi Manchurian", "Veg", 200, "gobi-manchurian.jpg",
+     "Crisp cauliflower florets in a tangy garlic soy glaze, served dry.", True, False, 2, 15),
+]
+
+NON_VEG_DISHES = [
+    ("Hyderabadi Chicken Dum Biryani", "Non-Veg", 340, "hyderabadi-chicken-dum-biryani.jpg",
+     "Sealed-pot dum biryani with long-grain basmati, saffron chicken and fried onions.", False, True, 3, 30),
+    ("Chicken Butter Masala", "Non-Veg", 320, "chicken-butter-masala.jpg",
+     "Tandoor-roasted chicken folded into a mild tomato and butter gravy with cream.", False, True, 1, 22),
+    ("Chicken Tikka Masala", "Non-Veg", 310, "chicken-tikka-masala.jpg",
+     "Charred chicken tikka simmered in a smoky onion-tomato masala with fenugreek.", False, True, 2, 22),
+    ("Chicken Korma", "Non-Veg", 320, "chicken-korma.jpg",
+     "Chicken in a mild cashew and coconut cream sauce with whole spices.", False, False, 1, 20),
+    ("Chicken Chettinad", "Non-Veg", 330, "chicken-chettinad.jpg",
+     "Spicy chicken curry with roasted coconut, curry leaves and black pepper.", False, True, 3, 25),
+    ("Mutton Rogan Josh", "Non-Veg", 350, "mutton-rogan-josh.jpg",
+     "Slow-cooked mutton in a fragrant Kashmiri chilli and fennel gravy.", False, True, 3, 35),
+    ("Mutton Biryani", "Non-Veg", 350, "mutton-biryani.jpg",
+     "Layered basmati with tender mutton, saffron milk and caramelised onions.", False, False, 3, 35),
+    ("Fish Curry", "Non-Veg", 320, "fish-curry.jpg",
+     "Fresh fish fillets in a tangy coconut and tamarind gravy with curry leaves.", False, False, 2, 20),
+    ("Prawn Masala", "Non-Veg", 340, "prawn-masala.jpg",
+     "Succulent prawns in a spicy onion-tomato masala with kokum and coconut.", False, False, 3, 18),
+    ("Chicken 65", "Non-Veg", 300, "chicken-65.jpg",
+     "Crisp fried chicken tossed with curry leaf, chilli and yoghurt.", False, True, 3, 14),
+    ("Tandoori Chicken", "Non-Veg", 320, "tandoori-chicken.jpg",
+     "Chicken marinated in yoghurt and spices, roasted until charred at the edges.", False, False, 2, 24),
+    ("Chicken Lollipop", "Non-Veg", 310, "chicken-lollipop.jpg",
+     "Frenched chicken wings coated in a spicy batter and deep-fried.", False, False, 2, 20),
+    ("Mutton Kheema", "Non-Veg", 330, "mutton-kheema.jpg",
+     "Minced mutton cooked with peas, tomatoes and garam masala.", False, False, 2, 25),
+    ("Chicken Kolhapuri", "Non-Veg", 330, "chicken-kolhapuri.jpg",
+     "Fiery chicken curry with Kolhapuri masala, coconut and tamarind.", False, False, 3, 25),
+    ("Amritsari Fish", "Non-Veg", 330, "amritsari-fish.jpg",
+     "Fish fillets coated in spiced gram flour batter, deep-fried crisp.", False, False, 2, 18),
+    ("Chicken Saagwala", "Non-Veg", 310, "chicken-saagwala.jpg",
+     "Chicken simmered in a creamy spinach gravy with garlic and fenugreek.", False, False, 2, 20),
+    ("Egg Curry", "Non-Veg", 300, "egg-curry.jpg",
+     "Boiled eggs in a spiced onion tomato gravy, best with paratha.", False, False, 2, 17),
+    ("Mutton Korma", "Non-Veg", 350, "mutton-korma.jpg",
+     "Tender mutton in a rich cashew and almond cream sauce with saffron.", False, False, 2, 30),
+    ("Chicken Vindaloo", "Non-Veg", 320, "chicken-vindaloo.jpg",
+     "Goan-style fiery chicken curry with vinegar, garlic and red chillies.", False, False, 3, 25),
+    ("Fish Tikka", "Non-Veg", 320, "fish-tikka.jpg",
+     "Fish cubes marinated in yoghurt and spices, charred in the tandoor.", False, False, 2, 18),
+]
+
+DESSERTS = [
+    ("Gulab Jamun", "Desserts", 120, "gulab-jamun.jpg",
+     "Warm milk dumplings soaked in cardamom sugar syrup, served with pistachio slivers.", True, True, 0, 5),
+    ("Rasmalai", "Desserts", 140, "rasmalai.jpg",
+     "Soft cheese dumplings in a saffron pistachio milk reduction.", True, False, 0, 5),
+    ("Kesar Kulfi", "Desserts", 130, "kesar-kulfi.jpg",
+     "Traditional Indian ice cream with saffron, cardamom and pistachios.", True, False, 0, 4),
+    ("Gajar Ka Halwa", "Desserts", 150, "gajar-ka-halwa.jpg",
+     "Slow-cooked carrot dessert with ghee, cardamom and almond slivers.", True, True, 0, 12),
+    ("Shahi Tukda", "Desserts", 160, "shahi-tukda.jpg",
+     "Fried bread soaked in saffron rabri, topped with nuts and silver leaf.", True, False, 0, 8),
+    ("Kaju Katli", "Desserts", 180, "kaju-katli.jpg",
+     "Diamond-shaped cashew fudge with a silver leaf finish.", True, False, 0, 4),
+    ("Rasgulla", "Desserts", 110, "rasgulla.jpg",
+     "Spongy cheese balls in a light cardamom sugar syrup.", True, False, 0, 5),
+    ("Mysore Pak", "Desserts", 140, "mysore-pak.jpg",
+     "Rich gram flour fudge with ghee, sugar and a hint of cardamom.", True, False, 0, 6),
+    ("Phirni", "Desserts", 120, "phirni.jpg",
+     "Ground rice pudding with saffron, cardamom and rose water.", True, False, 0, 5),
+    ("Jalebi", "Desserts", 100, "jalebi.jpg",
+     "Crispy spiral fermented batter soaked in saffron syrup.", True, False, 0, 6),
+    ("Malpua", "Desserts", 130, "malpua.jpg",
+     "Deep-fried pancakes soaked in sugar syrup, served with rabri.", True, False, 0, 8),
+    ("Kheer", "Desserts", 110, "kheer.jpg",
+     "Creamy rice pudding slow-cooked with milk, sugar, cardamom and nuts.", True, False, 0, 8),
+    ("Sandesh", "Desserts", 120, "sandesh.jpg",
+     "Bengali sweet made from fresh chhena, cardamom and pistachio.", True, False, 0, 4),
+    ("Cham Cham", "Desserts", 130, "cham-cham.jpg",
+     "Cylindrical chhena sweets stuffed with khoya and coated with coconut.", True, False, 0, 5),
+    ("Peda", "Desserts", 110, "peda.jpg",
+     "Milk solids cooked with sugar and cardamom, shaped into rounds.", True, False, 0, 4),
+    ("Modak", "Desserts", 130, "modak.jpg",
+     "Steamed rice flour dumplings filled with coconut and jaggery.", True, False, 0, 8),
+    ("Besan Ladoo", "Desserts", 100, "besan-ladoo.jpg",
+     "Roasted gram flour balls with ghee, sugar and cardamom.", True, False, 0, 6),
+    ("Coconut Barfi", "Desserts", 110, "coconut-barfi.jpg",
+     "Fresh coconut and milk solids cooked to a fudge-like texture.", True, False, 0, 5),
+    ("Anjeer Halwa", "Desserts", 160, "anjeer-halwa.jpg",
+     "Fig halwa with khoya, ghee and aromatic cardamom.", True, True, 0, 10),
+    ("Chocolate Brownie", "Desserts", 180, "chocolate-brownie.jpg",
+     "Fudgy dark chocolate brownie served warm with vanilla ice cream.", True, False, 0, 6),
+]
+
+COOL_DRINKS = [
+    ("Mango Lassi", "Cool Drinks", 120, "mango-lassi.jpg",
+     "Thick mango pulp whisked with cool yoghurt and a touch of honey.", True, True, 0, 5),
+    ("Sweet Lassi", "Cool Drinks", 90, "sweet-lassi.jpg",
+     "Classic sweet yoghurt drink with a hint of cardamom.", True, False, 0, 4),
+    ("Salted Lassi", "Cool Drinks", 90, "salted-lassi.jpg",
+     "Savoury yoghurt drink with roasted cumin and black salt.", True, False, 0, 4),
+    ("Masala Chaas", "Cool Drinks", 80, "masala-chaas.jpg",
+     "Spiced buttermilk with green chilli, ginger and coriander.", True, False, 0, 4),
+    ("Fresh Lime Soda", "Cool Drinks", 80, "fresh-lime-soda.jpg",
+     "Sweet or salted lime soda with a sprig of mint.", True, False, 0, 3),
+    ("Watermelon Juice", "Cool Drinks", 100, "watermelon-juice.jpg",
+     "Fresh watermelon juice with a hint of black salt and mint.", True, False, 0, 4),
+    ("Orange Juice", "Cool Drinks", 110, "orange-juice.jpg",
+     "Freshly squeezed orange juice served chilled.", True, False, 0, 4),
+    ("Pineapple Juice", "Cool Drinks", 110, "pineapple-juice.jpg",
+     "Fresh pineapple juice with a touch of ginger.", True, False, 0, 4),
+    ("Mix Fruit Juice", "Cool Drinks", 120, "mix-fruit-juice.jpg",
+     "Blend of seasonal fruits - apple, orange, pineapple and pomegranate.", True, False, 0, 5),
+    ("Cold Coffee", "Cool Drinks", 130, "cold-coffee.jpg",
+     "Chilled coffee with milk, sugar and a scoop of vanilla ice cream.", True, True, 0, 5),
+    ("Chocolate Milkshake", "Cool Drinks", 150, "chocolate-milkshake.jpg",
+     "Thick chocolate shake topped with whipped cream and cocoa.", True, True, 0, 6),
+    ("Strawberry Milkshake", "Cool Drinks", 150, "strawberry-milkshake.jpg",
+     "Fresh strawberry milkshake with vanilla ice cream and whipped cream.", True, False, 0, 6),
+    ("Vanilla Milkshake", "Cool Drinks", 140, "vanilla-milkshake.jpg",
+     "Classic vanilla milkshake with a cherry on top.", True, False, 0, 5),
+    ("Oreo Milkshake", "Cool Drinks", 160, "oreo-milkshake.jpg",
+     "Cookies and cream milkshake with crushed Oreo cookies.", True, False, 0, 6),
+    ("Mango Milkshake", "Cool Drinks", 150, "mango-milkshake.jpg",
+     "Ripe mango blended with milk and vanilla ice cream.", True, False, 0, 5),
+    ("Virgin Mojito", "Cool Drinks", 120, "virgin-mojito.jpg",
+     "Alcohol-free lime, mint and soda with a sugar cane stirrer.", True, False, 0, 4),
+    ("Blue Lagoon", "Cool Drinks", 130, "blue-lagoon.jpg",
+     "Blue curacao syrup with lemonade and sprite, served over ice.", True, False, 0, 4),
+    ("Cranberry Cooler", "Cool Drinks", 120, "cranberry-cooler.jpg",
+     "Cranberry juice with lime, mint and a splash of soda.", True, False, 0, 4),
+    ("Iced Tea", "Cool Drinks", 100, "iced-tea.jpg",
+     "Black tea chilled over ice with lemon and a hint of mint.", True, False, 0, 3),
+    ("Rose Falooda", "Cool Drinks", 140, "rose-falooda.jpg",
+     "Rose syrup with vermicelli, basil seeds, milk and ice cream.", True, True, 0, 6),
 ]
 
 
-# Biryani and rice dishes. Kept as their own list so the same set can be
-# added to an existing menu without wiping the dishes already there.
-#
-# name, category, price, image, description, veg, featured, spice, prep(min)
-BIRYANI_DISHES = [
-    ("Hyderabadi Chicken Dum Biryani", "Biryani", 420,
-     "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=600&q=80",
-     "Sealed-pot dum biryani with long-grain basmati, saffron and fried onions.",
-     False, True, 3, 25),
-    ("Tandoori Chicken Biryani", "Biryani", 450,
-     "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=600&q=80",
-     "Charred tandoori chicken folded into masala rice with mint chutney.",
-     False, True, 3, 25),
-    ("Mutton Biryani", "Biryani", 560,
-     "https://images.unsplash.com/photo-1604908176997-125e7c0d7f0f?auto=format&fit=crop&w=600&q=80",
-     "Slow-cooked mutton shank with whole spices and caramelised onion.",
-     False, False, 3, 30),
-    ("Hyderabadi Mutton Dum Biryani", "Biryani", 620,
-     "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=600&q=80",
-     "Restaurant-style dum biryani, serve for two with raita and salad.",
-     False, False, 3, 32),
-    ("Chicken Biryani", "Biryani", 320,
-     "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=600&q=80",
-     "Everyday chicken biryani with tomato masala and boiled egg.",
-     False, False, 2, 22),
-    ("Chicken Fried Rice", "Biryani", 320,
-     "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=600&q=80",
-     "Wok-tossed rice with shredded chicken, spring onion and soy.",
-     False, False, 2, 18),
-    ("Paneer Biryani", "Biryani", 340,
-     "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=600&q=80",
-     "Soft paneer cubes, cashew and raisin biryani finished in ghee.",
-     True, False, 2, 22),
-    ("Mushroom Biryani", "Biryani", 330,
-     "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=600&q=80",
-     "Button mushrooms and shallots in a lightly spiced dum finish.",
-     True, False, 1, 22),
-    ("Kashmiri Pulao", "Biryani", 350,
-     "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=600&q=80",
-     "Saffron long-grain rice with fried cashew, almond and raisin.",
-     True, False, 1, 22),
-    ("Egg Biryani", "Biryani", 300,
-     "https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=600&q=80",
-     "Boiled egg buried in spiced rice with fried onion and lemon.",
-     False, False, 2, 20),
-    ("Veg Dum Biryani", "Biryani", 300,
-     "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=600&q=80",
-     "Seasonal vegetables layered with rice and slow-cooked on dum.",
-     True, False, 1, 20),
-    ("Veg Biryani", "Biryani", 280,
-     "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=600&q=80",
-     "Fragrant basmati with mixed vegetables and mint coriander.",
-     True, False, 1, 20),
-    ("Jeera Rice", "Biryani", 150,
-     "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=600&q=80",
-     "Basmati tempered with cumin, curry leaf and ghee.",
-     True, False, 0, 15),
-    ("Veg Fried Rice", "Biryani", 240,
-     "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=600&q=80",
-     "Wok-tossed rice with carrot, beans and spring onion.",
-     True, False, 1, 16),
-    ("Biryani Combo Platter for Two", "Biryani", 680,
-     "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=600&q=80",
-     "Two chicken biryanis, raita, salad and gulab jamun.",
-     False, False, 2, 30),
-]
+def _photo_url(image_filename: str) -> str:
+    return "/images/menu/" + image_filename
+
+
+ALL_DISHES = VEG_DISHES + NON_VEG_DISHES + DESSERTS + COOL_DRINKS
 
 
 def seed_menu(reset=False):
@@ -217,7 +198,7 @@ def seed_menu(reset=False):
 
     Matches on the dish name, so running this twice is safe and a menu
     that is already stocked only gains the new dishes. Pass reset=True to
-    wipe the table first and rebuild it from SAMPLE_DISHES.
+    wipe the table first and rebuild it from ALL_DISHES.
     """
     db = SessionLocal()
 
@@ -227,15 +208,18 @@ def seed_menu(reset=False):
             db.commit()
 
         added = 0
-        existing = {row.name for row in db.query(Menu).all()}
+        existing = {row.name.lower() for row in db.query(Menu).all()}
 
-        for dish in SAMPLE_DISHES + BIRYANI_DISHES:
+        for dish in ALL_DISHES:
             (
-                name, category, price, image_url, description,
+                name, category, price, photo_id, description,
                 is_vegetarian, is_featured, spice_level, prep_time,
             ) = dish
 
-            if name in existing:
+            image_url = _photo_url(photo_id)
+
+            # Case-insensitive duplicate check
+            if name.lower() in existing:
                 continue
 
             db.add(Menu(
@@ -251,7 +235,7 @@ def seed_menu(reset=False):
                 available=True,
             ))
 
-            existing.add(name)
+            existing.add(name.lower())
             added += 1
 
         db.commit()
@@ -259,6 +243,11 @@ def seed_menu(reset=False):
         total = db.query(Menu).count()
 
         print(f"Added {added} new menu item(s). Menu now has {total} items.")
+
+        # Print category counts
+        for cat in ["Veg", "Non-Veg", "Desserts", "Cool Drinks"]:
+            count = db.query(Menu).filter(Menu.category == cat).count()
+            print(f"  {cat}: {count} items")
 
         return added
 
@@ -269,4 +258,4 @@ def seed_menu(reset=False):
 if __name__ == "__main__":
     random.seed(42)
 
-    seed_menu()
+    seed_menu(reset=True)

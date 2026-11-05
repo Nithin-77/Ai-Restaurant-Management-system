@@ -1332,8 +1332,500 @@ button {
 }
 
 /* =========================================================
-   CONTENT CARD
+   TODAY COMMAND CENTER
    ========================================================= */
+
+.today-command-center {
+  margin-bottom: 28px;
+  background: linear-gradient(135deg, #1f2937 0%, #312e81 30%, #7c3aed 100%);
+  border-radius: 24px;
+  padding: 28px;
+  color: white;
+  box-shadow: 0 24px 60px rgba(76, 58, 184, 0.28);
+  overflow: hidden;
+  position: relative;
+}
+
+.today-command-center::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at top right,
+    rgba(255, 255, 255, 0.12),
+    transparent 35%
+  );
+}
+
+.today-command-center > * {
+  position: relative;
+  z-index: 1;
+}
+
+.today-header {
+  margin-bottom: 24px;
+}
+
+.today-title-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.today-eyebrow {
+  display: inline-block;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  font-size: 11px;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.today-title-row h2 {
+  margin: 0;
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  line-height: 1.1;
+  color: white;
+}
+
+.today-badge.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.32);
+  color: #d1fae5;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.today-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px;
+}
+
+.today-stat-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 20px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.today-stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.today-stat-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.today-stat-header h3 {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.today-stat-label {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.today-stat-value {
+  font-size: 2.2rem;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-bottom: 16px;
+  letter-spacing: -0.5px;
+}
+
+.today-stat-value.gold {
+  color: #fde047;
+  text-shadow: 0 0 20px rgba(253, 224, 71, 0.3);
+}
+
+.today-stat-breakdown {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.breakdown-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.breakdown-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 700;
+}
+
+.breakdown-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+}
+
+.breakdown-value.collected {
+  color: #4ade80;
+}
+
+.breakdown-value.outstanding {
+  color: #f87171;
+}
+
+/* LIFECYCLE */
+.today-lifecycle {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.lifecycle-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.lifecycle-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 700;
+}
+
+.lifecycle-count {
+  font-size: 16px;
+  font-weight: 800;
+  color: white;
+}
+
+/* RESERVATIONS */
+.today-reservation-status {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.res-status-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.res-status-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 700;
+}
+
+.res-status-count {
+  font-size: 16px;
+  font-weight: 800;
+  color: white;
+}
+
+/* CUSTOMERS */
+.today-customer-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.customer-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.customer-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 700;
+}
+
+.customer-count {
+  font-size: 16px;
+  font-weight: 800;
+  color: white;
+}
+
+/* POPULAR DISHES */
+.today-popular-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.popular-dish-row {
+  display: grid;
+  grid-template-columns: 36px 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.popular-rank {
+  font-size: 11px;
+  font-weight: 800;
+  color: #fde047;
+  text-align: center;
+}
+
+.popular-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+}
+
+.popular-qty {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.popular-rev {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fde047;
+}
+
+/* PAYMENTS */
+.today-payment-status {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.payment-status-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  text-align: center;
+}
+
+.payment-status-item.paid {
+  border-color: rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.06);
+}
+
+.payment-status-item.pending {
+  border-color: rgba(249, 115, 22, 0.3);
+  background: rgba(249, 115, 22, 0.06);
+}
+
+.payment-status-item.failed {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.payment-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 700;
+}
+
+.payment-count {
+  font-size: 18px;
+  font-weight: 800;
+  color: white;
+}
+
+.payment-status-item.paid .payment-count {
+  color: #4ade80;
+}
+
+.payment-status-item.pending .payment-count {
+  color: #fb923c;
+}
+
+.payment-status-item.failed .payment-count {
+  color: #f87171;
+}
+
+/* INVENTORY */
+.today-inventory-status {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.inv-status-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  text-align: center;
+}
+
+.inv-status-item.ok {
+  border-color: rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.06);
+}
+
+.inv-status-item.warn {
+  border-color: rgba(249, 115, 22, 0.3);
+  background: rgba(249, 115, 22, 0.06);
+}
+
+.inv-status-item.danger {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.inv-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 700;
+}
+
+.inv-count {
+  font-size: 18px;
+  font-weight: 800;
+  color: white;
+}
+
+.inv-status-item.ok .inv-count {
+  color: #4ade80;
+}
+
+.inv-status-item.warn .inv-count {
+  color: #fb923c;
+}
+
+.inv-status-item.danger .inv-count {
+  color: #f87171;
+}
+
+/* REVIEWS */
+.today-review-summary {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.review-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  text-align: center;
+}
+
+.review-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 700;
+}
+
+.review-count {
+  font-size: 18px;
+  font-weight: 800;
+  color: white;
+}
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  .today-stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .today-lifecycle {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .today-reservation-status {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .today-customer-metrics {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .today-payment-status {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .today-inventory-status {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .today-review-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .popular-dish-row {
+    grid-template-columns: 32px 1fr auto;
+  }
+  
+  .popular-rev {
+    display: none;
+  }
+}
+
+/* TABLE CONTAINER */
 
 .card,
 .table-card {

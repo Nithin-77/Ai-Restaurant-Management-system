@@ -26,7 +26,7 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
-from models import Kitchen, Menu, Order, OrderHeader, Settings
+from models import Kitchen, Menu, MenuCustomization, Order, OrderHeader, Settings, Inventory
 from services.table_service import (
     get_active_table_by_number,
     get_claimed_table,
@@ -152,6 +152,78 @@ def get_settings(db: Session) -> Settings:
     )
 
 
+# Default markup multiplier for customization charges (50% markup on ingredient cost)
+CUSTOMIZATION_MARKUP = 1.5
+
+
+# Unit conversion helpers for inventory costing
+# Inventory stores cost per base unit (kg or litre)
+# Customization quantity_per_portion may be in grams, ml, or pieces
+
+def _convert_to_base_unit(qty: float, from_unit: str, to_unit: str) -> float:
+    """Convert quantity from one unit to another.
+    
+    Supports: kg <-> g, litre <-> ml, piece (no conversion)
+    Also handles ml <-> kg for liquids (assuming density ~1 kg/litre)
+    """
+    if from_unit == to_unit:
+        return qty
+    
+    from_u = from_unit.lower().strip()
+    to_u = to_unit.lower().strip()
+    
+    # Weight conversions
+    if from_u in ("g", "gram", "grams") and to_u in ("kg", "kilogram", "kilograms"):
+        return qty / 1000.0
+    if from_u in ("kg", "kilogram", "kilograms") and to_u in ("g", "gram", "grams"):
+        return qty * 1000.0
+    
+    # Volume conversions
+    if from_u in ("ml", "millilitre", "millilitres") and to_u in ("litre", "liter", "litres", "liters"):
+        return qty / 1000.0
+    if from_u in ("litre", "liter", "litres", "liters") and to_u in ("ml", "millilitre", "millilitres"):
+        return qty * 1000.0
+    
+    # Cross-category: ml <-> kg (for liquids, assume 1 litre = 1 kg)
+    if from_u in ("ml", "millilitre", "millilitres") and to_u in ("kg", "kilogram", "kilograms"):
+        return qty / 1000.0  # 1000 ml = 1 litre ≈ 1 kg
+    if from_u in ("kg", "kilogram", "kilograms") and to_u in ("ml", "millilitre", "millilitres"):
+        return qty * 1000.0  # 1 kg ≈ 1 litre = 1000 ml
+    
+    # Cross-category: litre <-> kg (assume 1 litre = 1 kg for liquids)
+    if from_u in ("litre", "liter", "litres", "liters") and to_u in ("kg", "kilogram", "kilograms"):
+        return qty
+    if from_u in ("kg", "kilogram", "kilograms") and to_u in ("litre", "liter", "litres", "liters"):
+        return qty
+    
+    # For pieces and other units, no conversion
+    return qty
+
+
+def _calculate_ingredient_cost(inv_item, cust_option, portions, quantity):
+    """Calculate the ingredient cost for a customization.
+    
+    Handles unit conversion between inventory base unit and customization unit.
+    """
+    # Base cost per inventory unit
+    base_cost = float(inv_item.cost_per_unit or 0)
+    
+    # Quantity per portion in customization unit
+    qty_per_portion = float(cust_option.quantity_per_portion or 0)
+    
+    # Convert customization unit to inventory base unit
+    inv_unit = (inv_item.unit or "kg").lower().strip()
+    cust_unit = (cust_option.unit or "piece").lower().strip()
+    
+    # Convert quantity per portion to inventory base unit
+    qty_in_base_unit = _convert_to_base_unit(qty_per_portion, cust_unit, inv_unit)
+    
+    # Total ingredient cost = base_cost * qty_in_base_unit * portions * quantity
+    ingredient_cost = base_cost * qty_in_base_unit * portions * quantity
+    
+    return round(ingredient_cost, 2)
+
+
 # =========================================================
 # LINE VALIDATION AND PRICING
 # =========================================================
@@ -162,6 +234,8 @@ def _resolve_lines(db: Session, requested_lines):
 
     requested_lines: list of dicts with at least menu_item_id and
     quantity. Any price fields present are deliberately ignored.
+    
+    Optional customizations: list of {customization_id, portions}
     """
     if not requested_lines:
         raise CheckoutError("Your cart is empty")
@@ -230,6 +304,92 @@ def _resolve_lines(db: Session, requested_lines):
 
         unit_price = round(float(item.price or 0), 2)
 
+        # ---- Handle customizations ----
+        customizations = line.get("customizations") or []
+        customization_details = []
+        customization_extra_total = 0.0
+
+        if customizations:
+            # Load available customizations for this menu item
+            cust_options = db.query(MenuCustomization).filter(
+                MenuCustomization.menu_id == item.id,
+                MenuCustomization.available == True
+            ).all()
+
+            cust_by_id = {c.id: c for c in cust_options}
+
+            for cust_req in customizations:
+                cust_id = cust_req.get("customization_id")
+                portions = cust_req.get("portions", 1)
+
+                if cust_id not in cust_by_id:
+                    raise CheckoutError(
+                        f"Invalid customization option for '{item.name}'",
+                        status_code=400,
+                    )
+
+                cust_option = cust_by_id[cust_id]
+
+                # Validate portions
+                if portions < 1:
+                    raise CheckoutError(
+                        f"Customization portions must be at least 1",
+                        status_code=400,
+                    )
+                if portions > cust_option.max_portions:
+                    raise CheckoutError(
+                        f"Maximum {cust_option.max_portions} portions allowed for '{cust_option.label}'",
+                        status_code=400,
+                    )
+
+                # Check inventory stock
+                inv_item = db.query(Inventory).filter(Inventory.id == cust_option.inventory_id).first()
+                if not inv_item:
+                    raise CheckoutError(
+                        f"Customization ingredient not found in inventory",
+                        status_code=404,
+                    )
+
+                # Calculate required quantity in inventory base unit
+                required_qty_base = _convert_to_base_unit(
+                    cust_option.quantity_per_portion * portions * quantity,
+                    cust_option.unit,
+                    inv_item.unit
+                )
+                if inv_item.quantity < required_qty_base:
+                    raise CheckoutError(
+                        f"Insufficient stock for '{cust_option.label}' (need {required_qty_base:.2f} {inv_item.unit}, have {inv_item.quantity})",
+                        status_code=409,
+                    )
+
+                # Calculate extra charge: ingredient cost * markup
+                ingredient_cost = _calculate_ingredient_cost(inv_item, cust_option, portions, quantity)
+                extra_charge_total = round(ingredient_cost * CUSTOMIZATION_MARKUP, 2)
+                
+                # Extra charge per portion for display
+                extra_charge_per_portion = round(extra_charge_total / (portions * quantity), 2) if portions * quantity > 0 else 0
+
+                customization_extra_total += extra_charge_total
+
+                customization_details.append({
+                    "customization_id": cust_option.id,
+                    "label": cust_option.label,
+                    "portions": portions,
+                    "unit": cust_option.unit,
+                    "extra_charge_per_portion": extra_charge_per_portion,
+                    "extra_charge_total": extra_charge_total,
+                    "inventory_id": inv_item.id,
+                    "inventory_name": inv_item.item_name,
+                    "quantity_per_portion": cust_option.quantity_per_portion,
+                })
+
+        # Final unit price includes base + customization extras (per portion)
+        final_unit_price = unit_price
+        if customization_details:
+            # Add customization extra per portion to unit price for display
+            extra_per_portion = sum(c["extra_charge_per_portion"] * c["portions"] for c in customization_details)
+            final_unit_price = round(unit_price + extra_per_portion, 2)
+
         priced.append(
             {
                 "menu_item_id": item.id,
@@ -238,13 +398,16 @@ def _resolve_lines(db: Session, requested_lines):
                 "quantity": quantity,
                 # Straight from the database. The client cannot set this.
                 "unit_price": unit_price,
-                "line_total": round(unit_price * quantity, 2),
+                "final_unit_price": final_unit_price,
+                "line_total": round(final_unit_price * quantity, 2),
                 "image_url": item.image_url,
                 "special_instructions": (
                     line.get("special_instructions") or None
                 ),
                 "prep_time": item.prep_time,
                 "is_vegetarian": item.is_vegetarian,
+                "customizations": customization_details,
+                "customization_extra_total": round(customization_extra_total, 2),
             }
         )
 
@@ -421,9 +584,12 @@ def build_summary(db: Session, payload: dict, user: dict):
                 "category": line["category"],
                 "quantity": line["quantity"],
                 "unit_price": line["unit_price"],
+                "final_unit_price": line.get("final_unit_price", line["unit_price"]),
                 "line_total": line["line_total"],
                 "special_instructions": line["special_instructions"],
                 "image_url": line["image_url"],
+                "customizations": line.get("customizations", []),
+                "customization_extra_total": line.get("customization_extra_total", 0.0),
             }
             for line in lines
         ],
@@ -756,6 +922,7 @@ def checkout(db: Session, payload: dict, user: dict):
                 unit_price=line["unit_price"],
                 user_id=user["user_id"],
                 order_id=header.id,
+                customizations=line.get("customizations"),
             )
 
             db.add(order_row)
@@ -785,10 +952,43 @@ def checkout(db: Session, payload: dict, user: dict):
                     "menu_item": line["menu_item"],
                     "quantity": line["quantity"],
                     "unit_price": line["unit_price"],
+                    "final_unit_price": line.get("final_unit_price", line["unit_price"]),
                     "line_total": line["line_total"],
                     "special_instructions": line["special_instructions"],
+                    "customizations": line.get("customizations"),
+                    "customization_extra_total": line.get("customization_extra_total", 0.0),
                 }
             )
+
+        # Deduct inventory for customizations
+        for line in summary["items"]:
+            for cust in line.get("customizations", []):
+                inv_item = db.query(Inventory).filter(Inventory.id == cust["inventory_id"]).first()
+                if inv_item:
+                    # Convert required quantity to inventory base unit
+                    required_qty_base = _convert_to_base_unit(
+                        cust.get("quantity_per_portion", 1.0) * cust["portions"] * line["quantity"],
+                        cust["unit"],
+                        inv_item.unit
+                    )
+                    previous_qty = round(inv_item.quantity + required_qty_base, 2)
+                    inv_item.quantity = round(inv_item.quantity - required_qty_base, 2)
+                    # Record inventory event
+                    from services.event_service import record_event, INVENTORY_UPDATED, ENTITY_INVENTORY
+                    record_event(
+                        db,
+                        INVENTORY_UPDATED,
+                        ENTITY_INVENTORY,
+                        entity_id=inv_item.id,
+                        actor_user_id=user.get("user_id"),
+                        metadata={
+                            "item_name": inv_item.item_name,
+                            "previous_quantity": previous_qty,
+                            "new_quantity": round(inv_item.quantity, 2),
+                            "unit": inv_item.unit,
+                            "note": f"Customization for order {header.reference}: {cust['label']} x{cust['portions']} x{line['quantity']}",
+                        },
+                    )
 
         db.commit()
     except Exception:

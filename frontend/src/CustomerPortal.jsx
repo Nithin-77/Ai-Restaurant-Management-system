@@ -1,27 +1,29 @@
 import React, { useState, useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import {
- getMenu,
- quoteCart,
- checkoutCart,
- getMyOrders,
- getTableContext,
- getMyBill,
- getMyBillHistory,
- createPaymentRequest,
- getPayment,
- verifyPayment,
- cancelPayment,
- getMyActiveOrder,
- getMyRecommendations,
- createReservation,
- getMyReservations,
- createReview,
- getReviews,
- getPopularDishes,
- classifySentiment,
+  getMenu,
+  quoteCart,
+  checkoutCart,
+  getMyOrders,
+  getTableContext,
+  getMyBill,
+  getMyBillHistory,
+  createPaymentRequest,
+  getPayment,
+  verifyPayment,
+  cancelPayment,
+  getMyActiveOrder,
+  getMyRecommendations,
+  createReservation,
+  getMyReservations,
+  createReview,
+  getReviews,
+  getPopularDishes,
+  classifySentiment,
+  getCustomerTodayAnalytics,
+  getMenuCustomizations,
 } from "./api";
-import { getDishImage, isVegItem, spiceLabel } from "./dishImages";
+import { getDishImage, isVegItem, spiceLabel, FALLBACK_DISH_IMAGE } from "./dishImages";
 import { formatMoney } from "./money";
 import AppShell from "./AppShell";
 
@@ -91,18 +93,18 @@ function RecCard({ dish, trending = false }) {
  return (
  <article className="recs-card">
  <div className="recs-card-top">
- {dish.image_url ? (
- <img
- src={dish.image_url}
- alt={dish.name}
- className="recs-card-image"
- loading="lazy"
- />
- ) : (
- <div className="recs-card-image recs-card-image-fallback">
- {null}
- </div>
- )}
+{getDishImage(dish) ? (
+  <img
+  src={getDishImage(dish)}
+  alt={dish.name}
+  className="recs-card-image"
+  loading="lazy"
+  />
+) : (
+  <div className="recs-card-image recs-card-image-fallback">
+  {null}
+  </div>
+)}
 
  <div className="recs-card-head">
  <h4>{dish.name}</h4>
@@ -189,18 +191,22 @@ function CustomerPortal({ user, onLogout }) {
  // Dish quick view
  const [previewItem, setPreviewItem] = useState(null);
 
- // Cart & Ordering
- const [cart, setCart] = useState([]);
- const [orderType, setOrderType] = useState("dine-in"); // dine-in, takeaway, delivery
- const [tableNumber, setTableNumber] = useState("4");
- const [deliveryAddress, setDeliveryAddress] = useState("");
- const [orderNotes, setOrderNotes] = useState("");
- // Server-priced checkout summary from POST /api/orders/quote.
- const [quote, setQuote] = useState(null);
- const [quoteError, setQuoteError] = useState("");
+// Cart & Ordering
+  const [cart, setCart] = useState([]);
+  const [orderType, setOrderType] = useState("dine-in"); // dine-in, takeaway, delivery
+  const [tableNumber, setTableNumber] = useState("4");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [orderNotes, setOrderNotes] = useState("");
+  // Server-priced checkout summary from POST /api/orders/quote.
+  const [quote, setQuote] = useState(null);
+  const [quoteError, setQuoteError] = useState("");
 
- const [orderSuccessMsg, setOrderSuccessMsg] = useState("");
- const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  // Customization modal
+  const [customizingItem, setCustomizingItem] = useState(null);
+  const [availableCustomizations, setAvailableCustomizations] = useState([]);
+
+  const [orderSuccessMsg, setOrderSuccessMsg] = useState("");
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
 
  // Live Orders
  const [myOrders, setMyOrders] = useState([]);
@@ -255,6 +261,10 @@ function CustomerPortal({ user, onLogout }) {
  // zone reference that throws the moment the history view is opened.
  const [billLoading, setBillLoading] = useState(false);
 
+// Tracks image URLs that failed to load, so each card shows the fallback
+// only once instead of re-fetching on every render.
+const [failedImages, setFailedImages] = useState(new Set());
+
  const loadHistory = async () => {
  try {
  setBillLoading(true);
@@ -276,10 +286,13 @@ function CustomerPortal({ user, onLogout }) {
  }
  }, [billView]);
 
- // Active order for live tracking (from order headers)
- const [activeOrder, setActiveOrder] = useState(null);
+// Active order for live tracking (from order headers)
+  const [activeOrder, setActiveOrder] = useState(null);
 
- const customerName = user?.name || "Guest";
+  // Customer today analytics from server (uses restaurant timezone)
+  const [customerToday, setCustomerToday] = useState(null);
+
+  const customerName = user?.name || "Guest";
 
  useEffect(() => {
  loadInitialData();
@@ -302,62 +315,88 @@ function CustomerPortal({ user, onLogout }) {
  return () =>clearTimeout(timer);
  }, [reviewForm.comment]);
 
- const loadInitialData = async () => {
- try {
- setLoading(true);
- const [menuData, ordersData, recData, popData, reviewsData, reservationsData] =
- await Promise.allSettled([
- getMenu(),
- getMyOrders(),
- // Phase 5: recommendations now come from the account in the
- // JWT rather than from a display name in the URL. The old
- // name-based call could be pointed at another guest's taste
- // profile; this endpoint cannot.
- getMyRecommendations(8),
- getPopularDishes(4),
- getReviews(),
- // The guest's own bookings. This used to call the admin list,
- // which answers 403 for a customer, so a guest's reservations
- // silently never loaded.
- getMyReservations(),
- ]);
+const loadInitialData = async () => {
+  try {
+  setLoading(true);
+  const [menuData, ordersData, recData, popData, reviewsData, reservationsData, todayData] =
+  await Promise.allSettled([
+  getMenu(),
+  getMyOrders(),
+  // Phase 5: recommendations now come from the account in the
+  // JWT rather than from a display name in the URL. The old
+  // name-based call could be pointed at another guest's taste
+  // profile; this endpoint cannot.
+  getMyRecommendations(8),
+  getPopularDishes(4),
+  getReviews(),
+  // The guest's own bookings. This used to call the admin list,
+  // which answers 403 for a customer, so a guest's reservations
+  // silently never loaded.
+  getMyReservations(),
+  getCustomerTodayAnalytics(),
+  ]);
 
- if (menuData.status === "fulfilled") {
- const menuItems = menuData.value || [];
- setMenu(menuItems);
+  if (menuData.status === "fulfilled") {
+  const menuItems = menuData.value || [];
+  setMenu(menuItems);
 
- if (menuItems.length > 0) {
- setReviewForm((previous) => ({
- ...previous,
- menu_item: menuItems[0].name,
- }));
- }
- }
- if (ordersData.status === "fulfilled") {
- setMyOrders(ordersData.value || []);
- }
- if (recData.status === "fulfilled") {
- setRecommendations(recData.value || null);
- }
- if (popData.status === "fulfilled") {
- setPopularDishes(popData.value?.popular_dishes || []);
- }
- if (reviewsData.status === "fulfilled") {
- setRecentReviews(reviewsData.value || []);
- }
- if (reservationsData.status === "fulfilled") {
- const allRes = reservationsData.value || [];
- const userRes = allRes.filter(
- (r) =>r.customer_name?.toLowerCase() === customerName.toLowerCase()
- );
- setMyReservations(userRes);
- }
- } catch (err) {
- console.error("Error loading customer portal data:", err);
- } finally {
- setLoading(false);
- }
- };
+  if (menuItems.length > 0) {
+  setReviewForm((previous) => ({
+  ...previous,
+  menu_item: menuItems[0].name,
+  }));
+  }
+  }
+  if (ordersData.status === "fulfilled") {
+  setMyOrders(ordersData.value || []);
+  }
+  if (recData.status === "fulfilled") {
+  setRecommendations(recData.value || null);
+  }
+  if (popData.status === "fulfilled") {
+  setPopularDishes(popData.value?.popular_dishes || []);
+  }
+  if (reviewsData.status === "fulfilled") {
+  setRecentReviews(reviewsData.value || []);
+  }
+  if (reservationsData.status === "fulfilled") {
+  const allRes = reservationsData.value || [];
+  const userRes = allRes.filter(
+  (r) =>r.customer_name?.toLowerCase() === customerName.toLowerCase()
+  );
+  setMyReservations(userRes);
+  }
+  if (todayData.status === "fulfilled") {
+  setCustomerToday(todayData.value);
+  }
+  } catch (err) {
+  console.error("Error loading customer portal data:", err);
+  } finally {
+  setLoading(false);
+  }
+  };
+
+  // Refetch the menu from the backend - used when the customer returns to
+  // the menu view after an admin change, so the displayed menu stays in sync.
+  const refreshMenu = async () => {
+  try {
+  const menuData = await getMenu();
+  if (menuData) {
+  setMenu(menuData);
+  setFailedImages(new Set());
+  }
+  } catch (err) {
+  console.error("Menu refresh error:", err);
+  }
+  };
+
+  // Refetch the menu whenever the customer navigates to the menu tab, so
+  // admin changes (price, image, availability) are reflected immediately.
+  useEffect(() => {
+  if (activeTab === "menu") {
+  refreshMenu();
+  }
+  }, [activeTab]);
 
  // Refresh only the live tracking list
  const refreshOrders = async () => {
@@ -696,13 +735,76 @@ function CustomerPortal({ user, onLogout }) {
  );
  };
 
- const updateCartSpecifications = (id, specs) => {
- setCart((prev) =>
- prev.map((c) =>
- c.id === id ? { ...c, specifications: specs } : c
- )
- );
- };
+const updateCartSpecifications = (id, specs) => {
+  setCart((prev) =>
+    prev.map((c) =>
+      c.id === id ? { ...c, specifications: specs } : c
+    )
+  );
+};
+
+// Customization modal handlers
+const openCustomizationModal = async (item) => {
+  try {
+    const customizations = await getMenuCustomizations(item.id);
+    setAvailableCustomizations(customizations);
+    // Pre-populate with existing customizations on the cart item
+    const existingCustomizations = item.customizations || [];
+    setCustomizingItem({
+      ...item,
+      customizations: customizations.map((c) => {
+        const existing = existingCustomizations.find((ec) => ec.customization_id === c.id);
+        return {
+          ...c,
+          portions: existing ? existing.portions : 0,
+        };
+      }),
+    });
+  } catch (err) {
+    console.error("Failed to load customizations:", err);
+    alert("Could not load customization options.");
+  }
+};
+
+const closeCustomizationModal = () => {
+  setCustomizingItem(null);
+  setAvailableCustomizations([]);
+};
+
+const updateCustomizationPortions = (custId, portions) => {
+  setCustomizingItem((prev) => {
+    if (!prev) return prev;
+    return {
+      ...prev,
+      customizations: prev.customizations.map((c) =>
+        c.id === custId ? { ...c, portions: Math.max(0, Math.min(c.max_portions, portions)) } : c
+      ),
+    };
+  });
+};
+
+const applyCustomizations = () => {
+  if (!customizingItem) return;
+  
+  const selectedCustomizations = customizingItem.customizations
+    .filter((c) => c.portions > 0)
+    .map((c) => ({
+      customization_id: c.id,
+      portions: c.portions,
+    }));
+
+  setCart((prev) =>
+    prev.map((item) =>
+      item.id === customizingItem.id
+        ? { ...item, customizations: selectedCustomizations }
+        : item
+    )
+  );
+  
+  closeCustomizationModal();
+  // Refresh quote after applying customizations
+  // The useEffect watching cart will trigger a new quote
+};
 
  const toggleFavourite = (itemId) => {
  setFavourites((previous) => {
@@ -818,52 +920,53 @@ function CustomerPortal({ user, onLogout }) {
  }, {}),
  };
 
- const favouriteDish = Object.entries(myOrderStats.favourite).sort(
- (a, b) =>b[1].quantity - a[1].quantity
- )[0];
+const favouriteDish = Object.entries(myOrderStats.favourite).sort(
+  (a, b) =>b[1].quantity - a[1].quantity
+)[0];
 
- const [historyFilter, setHistoryFilter] = useState("all");
+  const [historyFilter, setHistoryFilter] = useState("all");
 
- // ---- the greeting ----
- //
- // Time of day comes from the browser clock. It is a greeting, not a
- // measurement about the restaurant, so it is presentation and stays out
- // of every API call.
- const greetingPeriod = (() => {
- const hour = new Date().getHours();
+  // ---- the greeting ----
+  //
+  // Time of day comes from the browser clock. It is a greeting, not a
+  // measurement about the restaurant, so it is presentation and stays out
+  // of every API call.
+  const greetingPeriod = (() => {
+  const hour = new Date().getHours();
 
- if (hour < 12) return "Good morning";
- if (hour < 17) return "Good afternoon";
- if (hour < 21) return "Good evening";
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  if (hour < 21) return "Good evening";
 
- return "Good evening";
- })();
+  return "Good evening";
+  })();
 
- // The time of day on its own, for the heading. `greetingPeriod` already
- // carries the word "Good", so the heading cannot repeat it.
- const greetingWord = greetingPeriod.replace(/^Good\s+/i, "");
+  // The time of day on its own, for the heading. `greetingPeriod` already
+  // carries the word "Good", so the heading cannot repeat it.
+  const greetingWord = greetingPeriod.replace(/^Good\s+/i, "");
 
  // A guest's registered name can be "Ananya Sharma"; a greeting that says
  // "Good evening, Ananya Sharma"is correct but reads like a form field.
  const firstName = (customerName || "Guest").trim().split(/\s+/)[0];
 
- // The payload the server prices. It carries ids and quantities only -
- // no price, no total, no customer identity.
- const buildCheckoutPayload = () => ({
- items: cart.map((item) => ({
- menu_item_id: item.id,
- quantity: item.quantity,
- special_instructions: item.specifications || null,
- })),
- order_type: orderType,
- table_number:
- orderType === "dine-in" && !tableContext
- ? Number(tableNumber)
- : null,
- delivery_address:
- orderType === "delivery" ? deliveryAddress.trim() : null,
- notes: orderNotes.trim() || null,
- });
+// The payload the server prices. It carries ids and quantities only -
+  // no price, no total, no customer identity.
+  const buildCheckoutPayload = () => ({
+    items: cart.map((item) => ({
+      menu_item_id: item.id,
+      quantity: item.quantity,
+      special_instructions: item.specifications || null,
+      customizations: item.customizations || [],
+    })),
+    order_type: orderType,
+    table_number:
+    orderType === "dine-in" && !tableContext
+    ? Number(tableNumber)
+    : null,
+    delivery_address:
+    orderType === "delivery" ? deliveryAddress.trim() : null,
+    notes: orderNotes.trim() || null,
+  });
 
  // Re-price on the server whenever the cart or the order details change,
  // so every figure on screen came from menu.price and the settings row.
@@ -1001,43 +1104,55 @@ function CustomerPortal({ user, onLogout }) {
  }
  };
 
- // Filter Menu
- const categories = ["All", ...new Set(menu.map((m) =>m.category).filter(Boolean))];
+// Filter Menu
+const CATEGORY_ORDER = ["Veg", "Non-Veg", "Desserts", "Cool Drinks"];
 
- const featuredDishes = menu.filter((item) =>item.is_featured);
+  const categories = [
+  "All",
+  ...CATEGORY_ORDER.filter((cat) => menu.some((m) => m.category === cat)),
+  ];
 
- const filteredMenu = menu
- .filter((item) => {
- const matchesCategory =
- selectedCategory === "All" || item.category === selectedCategory;
- const term = searchQuery.trim().toLowerCase();
- const matchesSearch =
- !term ||
- item.name.toLowerCase().includes(term) ||
- (item.category || "").toLowerCase().includes(term) ||
- (item.description || "").toLowerCase().includes(term);
- const itemIsVeg = isVegItem(item);
- const matchesDiet =
- dietFilter === "all" ||
- (dietFilter === "veg" && itemIsVeg) ||
- (dietFilter === "nonveg" && !itemIsVeg);
- const matchesAvailability = !hideUnavailable || item.available !== false;
- return matchesCategory && matchesSearch && matchesDiet && matchesAvailability;
- })
- .sort((a, b) => {
- if (sortBy === "price-low") return Number(a.price) - Number(b.price);
- if (sortBy === "price-high") return Number(b.price) - Number(a.price);
- if (sortBy === "fastest") {
- return (Number(a.prep_time) || 99) - (Number(b.prep_time) || 99);
- }
+  const featuredDishes = menu.filter((item) =>item.is_featured);
 
- // "recommended" - featured dishes first, then the rest by name
- if (Boolean(b.is_featured) !== Boolean(a.is_featured)) {
- return b.is_featured ? 1 : -1;
- }
+  const categoryRank = (cat) => CATEGORY_ORDER.indexOf(cat);
 
- return a.name.localeCompare(b.name);
- });
+  const filteredMenu = menu
+  .filter((item) => {
+  const matchesCategory =
+  selectedCategory === "All" || item.category === selectedCategory;
+  const term = searchQuery.trim().toLowerCase();
+  const matchesSearch =
+  !term ||
+  item.name.toLowerCase().includes(term) ||
+  (item.category || "").toLowerCase().includes(term) ||
+  (item.description || "").toLowerCase().includes(term);
+  const itemIsVeg = isVegItem(item);
+  const matchesDiet =
+  dietFilter === "all" ||
+  (dietFilter === "veg" && itemIsVeg) ||
+  (dietFilter === "nonveg" && !itemIsVeg);
+  const matchesAvailability = !hideUnavailable || item.available !== false;
+  return matchesCategory && matchesSearch && matchesDiet && matchesAvailability;
+  })
+  .sort((a, b) => {
+  if (sortBy === "price-low") return Number(a.price) - Number(b.price);
+  if (sortBy === "price-high") return Number(b.price) - Number(a.price);
+  if (sortBy === "fastest") {
+  return (Number(a.prep_time) || 99) - (Number(b.prep_time) || 99);
+  }
+
+  // Default: category order (Veg, Non-Veg, Desserts, Cool Drinks),
+  // featured first within each category, then alphabetical by name.
+  const aRank = categoryRank(a.category);
+  const bRank = categoryRank(b.category);
+  if (aRank !== bRank) return aRank - bRank;
+
+  if (Boolean(b.is_featured) !== Boolean(a.is_featured)) {
+  return b.is_featured ? 1 : -1;
+  }
+
+  return a.name.localeCompare(b.name);
+  });
 
  // Customer-only navigation. These screens belong to the customer
  // portal alone and are never shown to an admin. The shell is shared with
@@ -1369,9 +1484,252 @@ function CustomerPortal({ user, onLogout }) {
  Points accumulate once the restaurant sets a rate.
  </small>
  </div>
- </div>
+</div>
 
- {/* ---- where to go next ---- */}
+      {/* =========================================================
+      TODAY AT PARADISE - Personalized Today Section
+      (All data from /api/analytics/customer/today - restaurant timezone)
+      ========================================================= */}
+      <div className="today-at-paradise">
+        <div className="today-header">
+          <span className="today-eyebrow">TODAY AT PARADISE</span>
+          <h2>My Today</h2>
+        </div>
+        <div className="today-grid">
+          {/* Current Order */}
+          <div className="today-card today-order">
+            <div className="today-card-header">
+              <h3>Current Order</h3>
+              <span className="today-badge live">LIVE</span>
+            </div>
+            {customerToday?.active_order ? (
+              <>
+                <div className="today-order-main">
+                  <div className="today-order-ref gold">
+                    {customerToday.active_order.reference || `#${customerToday.active_order.id}`}
+                  </div>
+                  <div className="today-order-status">{customerToday.active_order.status}</div>
+                  <div className="today-order-meta">
+                    {customerToday.active_order.total_amount && (
+                      <span className="today-order-total">
+                        {formatMoney(customerToday.active_order.total_amount, customerToday.active_order.currency)}
+                      </span>
+                    )}
+                    {customerToday.active_order.table_number && (
+                      <span className="today-order-table">Table {customerToday.active_order.table_number}</span>
+                    )}
+                    <span className="today-order-time">
+                      {customerToday.active_order.placed_at ? new Date(customerToday.active_order.placed_at).toLocaleTimeString() : '—'}
+                    </span>
+                  </div>
+                </div>
+                <div className="today-lifecycle-mini">
+                  {ORDER_STATUSES.map((stage, idx) => (
+                    <div key={stage} className={`lifecycle-mini-step ${customerToday.active_order.status === stage ? 'active' : (ORDER_STATUSES.indexOf(customerToday.active_order.status) > idx ? 'completed' : '')}`}>
+                      <span className="lifecycle-mini-dot" />
+                      <span className="lifecycle-mini-label">{stage}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : activeOrder ? (
+              <>
+                <div className="today-order-main">
+                  <div className="today-order-ref gold">
+                    {activeOrder.reference || `#${activeOrder.id}`}
+                  </div>
+                  <div className="today-order-status">{activeOrder.status}</div>
+                  <div className="today-order-meta">
+                    {activeOrder.total_price && (
+                      <span className="today-order-total">
+                        {formatMoney(activeOrder.total_price, activeOrder.currency)}
+                      </span>
+                    )}
+                    {activeOrder.table_number && (
+                      <span className="today-order-table">Table {activeOrder.table_number}</span>
+                    )}
+                    <span className="today-order-time">
+                      {activeOrder.placed_at ? new Date(activeOrder.placed_at).toLocaleTimeString() : '—'}
+                    </span>
+                  </div>
+                </div>
+                <div className="today-lifecycle-mini">
+                  {ORDER_STATUSES.map((stage, idx) => (
+                    <div key={stage} className={`lifecycle-mini-step ${activeOrder.status === stage ? 'active' : (ORDER_STATUSES.indexOf(activeOrder.status) > idx ? 'completed' : '')}`}>
+                      <span className="lifecycle-mini-dot" />
+                      <span className="lifecycle-mini-label">{stage}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="today-empty">
+                <span className="today-empty-icon">—</span>
+                <p>No active order right now</p>
+                <button className="primary-btn" onClick={() => handleCustomerNav("menu")}>
+                  Browse Menu
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Today's Spending - from server analytics (restaurant timezone) */}
+          <div className="today-card today-spending">
+            <div className="today-card-header">
+              <h3>Today's Spending</h3>
+            </div>
+            {customerToday ? (
+              <>
+                <div className="today-spending-main">
+                  <div className="today-spending-amount gold">
+                    {formatMoney(customerToday.spending?.total || 0)}
+                  </div>
+                  <div className="today-spending-details">
+                    <span>{customerToday.orders?.total || 0} order{customerToday.orders?.total !== 1 ? 's' : ''} today</span>
+                  </div>
+                </div>
+                {customerToday.spending?.unpaid > 0 && (
+                  <div className="today-unpaid-notice">
+                    <span className="unpaid-label">Unpaid</span>
+                    <span className="unpaid-amount">{formatMoney(customerToday.spending.unpaid)}</span>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="today-empty">
+                <span className="today-empty-icon">💰</span>
+                <p>Loading today's spending…</p>
+              </div>
+            )}
+          </div>
+
+          {/* Today's Reservation - from server analytics (restaurant timezone) */}
+          <div className="today-card today-reservation">
+            <div className="today-card-header">
+              <h3>Today's Reservation</h3>
+            </div>
+            {customerToday && customerToday.reservations?.total > 0 ? (
+              <>
+                <div className="today-reservation-main">
+                  <div className="today-reservation-time">
+                    {customerToday.reservations.confirmed > 0 ? 'Confirmed' : 'Pending'}
+                  </div>
+                  <div className="today-reservation-details">
+                    <span>{customerToday.reservations.total} reservation{customerToday.reservations.total !== 1 ? 's' : ''}</span>
+                    <span className={`res-status-${customerToday.reservations.confirmed > 0 ? 'confirmed' : 'pending'}`}>
+                      {customerToday.reservations.confirmed > 0 ? 'Confirmed' : 'Pending'}
+                    </span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="today-empty">
+                <span className="today-empty-icon">📅</span>
+                <p>No reservation for today</p>
+                <button className="secondary-btn" onClick={() => handleCustomerNav("reservations")}>
+                  Book a Table
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* AI Recommendation */}
+          <div className="today-card today-ai-pick">
+            <div className="today-card-header">
+              <h3>AI Pick For You</h3>
+            </div>
+            {recommendations?.personalized?.length > 0 ? (
+              <div className="today-ai-recommendation">
+                <div className="ai-rec-image">
+{getDishImage(recommendations.personalized[0]) ? (
+  <img src={getDishImage(recommendations.personalized[0])} alt={recommendations.personalized[0].name} />
+) : (
+  <div className="ai-rec-placeholder">—</div>
+)}
+                </div>
+                <div className="ai-rec-info">
+                  <h4>{recommendations.personalized[0].name}</h4>
+                  <span className="ai-rec-price">{formatMoney(recommendations.personalized[0].price)}</span>
+                  <p className="ai-rec-reason">{recommendations.personalized[0].reason}</p>
+                </div>
+                <button className="primary-btn" onClick={() => {
+                  const rec = recommendations.personalized[0];
+                  const matched = menu.find(m => m.name.toLowerCase() === rec.name?.toLowerCase());
+                  if (matched) {
+                    addToCart({
+                      id: matched.id,
+                      name: rec.name,
+                      price: rec.price,
+                      category: rec.category,
+                      image_url: rec.image_url || matched.image_url,
+                      prep_time: rec.prep_time ?? matched.prep_time,
+                    });
+                    handleCustomerNav("cart");
+                  }
+                }}>
+                  Add to Cart
+                </button>
+              </div>
+            ) : (
+              <div className="today-empty">
+                <span className="today-empty-icon">🤖</span>
+                <p>No recommendation yet</p>
+              </div>
+            )}
+          </div>
+
+          {/* Popular Today - from server analytics (today only) */}
+          <div className="today-card today-popular">
+            <div className="today-card-header">
+              <h3>Popular Today</h3>
+            </div>
+            {customerToday && customerToday.popular_dishes?.length > 0 ? (
+              <div className="today-popular-list">
+                {customerToday.popular_dishes.slice(0, 3).map((dish, idx) => (
+                  <div key={idx} className="popular-item">
+                    <span className="popular-rank">#{idx + 1}</span>
+                    <span className="popular-name">{dish.dish || dish.name}</span>
+                    <span className="popular-sold">{dish.quantity_sold || 0} sold</span>
+                    <span className="popular-rev">{formatMoney(dish.revenue || 0)}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="today-empty">
+                <span className="today-empty-icon">📊</span>
+                <p>No popular dishes today</p>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Actions */}
+          <div className="today-card today-actions">
+            <div className="today-card-header">
+              <h3>Quick Actions</h3>
+            </div>
+            <div className="today-actions-grid">
+<button className="action-btn primary" onClick={() => handleCustomerNav("menu")}>
+  <span className="action-icon">MENU</span>
+                <span>Browse Menu</span>
+              </button>
+              <button className="action-btn" onClick={() => handleCustomerNav("tracking")}>
+                <span className="action-icon">📦</span>
+                <span>Track Order</span>
+              </button>
+              <button className="action-btn" onClick={() => handleCustomerNav("reservations")}>
+                <span className="action-icon">📅</span>
+                <span>Reserve</span>
+              </button>
+              <button className="action-btn" onClick={() => handleCustomerNav("bill")}>
+                <span className="action-icon">💰</span>
+                <span>View Bill</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ---- where to go next ---- */}
  <div className="panel">
  <div className="panel-header">
  <h2>Your evening so far</h2>
@@ -1647,12 +2005,16 @@ function CustomerPortal({ user, onLogout }) {
  if (e.key === "Enter") setPreviewItem(item);
  }}
  >
- <img
- src={getDishImage(item)}
- alt={item.name}
- className="menu-card-img"
- loading="lazy"
- />
+<img
+  src={getDishImage(item)}
+  alt={item.name}
+  className="menu-card-img"
+  loading="lazy"
+  onError={(e) => {
+    e.currentTarget.src = FALLBACK_DISH_IMAGE;
+    setFailedImages((previous) => new Set([...previous, getDishImage(item)]));
+  }}
+/>
  <span className={`diet-badge ${veg ? "veg" : "non-veg"}`}>
  {veg ? "VEG" : "NON-VEG"}
  </span>
@@ -2093,50 +2455,70 @@ function CustomerPortal({ user, onLogout }) {
  <div className="cart-items-column">
  <div className="cart-items-card">
  <h3>Selected Items ({cartTotalItems})</h3>
- {cart.map((item) => (
- <>
- <div className="cart-row"key={item.id}>
- <img
- src={getDishImage(item)}
- alt={item.name}
- className="cart-thumb"
- />
- <div className="cart-item-info">
- <h4>{item.name}</h4>
- <span className="cart-unit-price">
- {formatMoney(item.price)} each
- </span>
- {item.prep_time > 0 && (
- <span className="cart-prep-hint">
- {item.prep_time} min
- </span>
- )}
- </div>
- <div className="cart-stepper">
- <button onClick={() =>updateCartQty(item.id, -1)}>−</button>
- <span>{item.quantity}</span>
- <button onClick={() =>updateCartQty(item.id, 1)}>+</button>
- </div>
- <div className="cart-item-total">
- {formatMoney(
- Number(item.price) * item.quantity,
- )}
- </div>
- </div>
- <div className="cart-item-specifications">
- <label>
- Special instructions (e.g., add salt, less spices, extra sauce)
- <input
- type="text"
- placeholder="Customize this dish..."
- value={item.specifications || ""}
- onChange={(e) =>updateCartSpecifications(item.id, e.target.value)}
- />
- </label>
- </div>
- </>
- ))}
- </div>
+{cart.map((item) => (
+  <>
+  <div className="cart-row"key={item.id}>
+  <img
+    src={getDishImage(item)}
+    alt={item.name}
+    className="cart-thumb"
+  />
+  <div className="cart-item-info">
+    <h4>{item.name}</h4>
+    <span className="cart-unit-price">
+      {formatMoney(item.final_unit_price ?? item.price)} each
+    </span>
+    {item.prep_time > 0 && (
+    <span className="cart-prep-hint">
+      {item.prep_time} min
+    </span>
+    )}
+    {/* Customizations display */}
+    {item.customizations && item.customizations.length > 0 && (
+      <div className="cart-customizations">
+        {item.customizations.map((cust, idx) => (
+          <span key={idx} className="cart-customization-badge">
+            + {cust.label} × {cust.portions} ({formatMoney(cust.extra_charge_total)})
+          </span>
+        ))}
+      </div>
+    )}
+  </div>
+  <div className="cart-stepper">
+    <button onClick={() =>updateCartQty(item.id, -1)}>−</button>
+    <span>{item.quantity}</span>
+    <button onClick={() =>updateCartQty(item.id, 1)}>+</button>
+  </div>
+  <div className="cart-item-total">
+    {formatMoney(
+      Number(item.line_total ?? item.price) * item.quantity,
+    )}
+  </div>
+  <div className="cart-actions">
+    <button
+      type="button"
+      className="cart-edit-customizations"
+      onClick={() => openCustomizationModal(item)}
+      aria-label={`Edit customizations for ${item.name}`}
+    >
+      ✎ Customize
+    </button>
+  </div>
+  </div>
+  <div className="cart-item-specifications">
+  <label>
+  Special instructions (e.g., add salt, less spices, extra sauce)
+  <input
+    type="text"
+    placeholder="Customize this dish..."
+    value={item.specifications || ""}
+    onChange={(e) =>updateCartSpecifications(item.id, e.target.value)}
+  />
+  </label>
+  </div>
+</>
+        ))}
+      </div>
 
  {/* Dining Options */}
  <div className="dining-options-card">
@@ -3635,13 +4017,87 @@ function CustomerPortal({ user, onLogout }) {
  )}
 
  {/* Footer Presentation Credits */}
- <footer className="customer-footer">
- <div className="footer-credits">
- <strong>Paradise Restaurant</strong>
- </div>
- </footer>
- </AppShell>
- );
+<footer className="customer-footer">
+  <div className="footer-credits">
+    <strong>Paradise Restaurant</strong>
+  </div>
+</footer>
+
+{/* Customization Modal */}
+{customizingItem && (
+  <div className="customization-modal-overlay" onClick={closeCustomizationModal}>
+    <div className="customization-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="customization-modal-header">
+        <h3>Customize {customizingItem.name}</h3>
+        <button type="button" className="modal-close" onClick={closeCustomizationModal}>✕</button>
+      </div>
+      <div className="customization-modal-body">
+        {availableCustomizations.length === 0 ? (
+          <p className="modal-empty">No customization options available for this dish.</p>
+        ) : (
+          <>
+            <p className="modal-hint">Select extra portions for each option. Prices shown include a 50% markup on ingredient cost.</p>
+            {customizingItem.customizations.map((cust) => (
+              <div key={cust.id} className="customization-option">
+                <div className="customization-info">
+                  <label>
+                    <strong>{cust.label}</strong>
+                    <span className="customization-unit">
+                      {cust.quantity_per_portion} {cust.unit} per portion · Max {cust.max_portions}
+                    </span>
+                  </label>
+                  <span className="customization-price">
+                    +{formatMoney(cust.extra_charge_per_portion)} per portion
+                  </span>
+                </div>
+                <div className="customization-stepper">
+                  <button
+                    type="button"
+                    onClick={() => updateCustomizationPortions(cust.id, cust.portions - 1)}
+                    disabled={cust.portions <= 0}
+                    aria-label={`Decrease ${cust.label}`}
+                  >
+                    −
+                  </button>
+                  <span className="customization-portion-value">{cust.portions}</span>
+                  <button
+                    type="button"
+                    onClick={() => updateCustomizationPortions(cust.id, cust.portions + 1)}
+                    disabled={cust.portions >= cust.max_portions}
+                    aria-label={`Increase ${cust.label}`}
+                  >
+                    +
+                  </button>
+                  <span className="customization-line-total">
+                    {cust.portions > 0 ? `= ${formatMoney(cust.extra_charge_per_portion * cust.portions)}` : ""}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+      <div className="customization-modal-footer">
+        <button
+          type="button"
+          className="btn btn-glass"
+          onClick={closeCustomizationModal}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="btn btn-gold"
+          onClick={applyCustomizations}
+        >
+          Apply ({customizingItem.customizations.filter(c => c.portions > 0).length} selected)
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+</AppShell>
+);
 }
 
 export default CustomerPortal;

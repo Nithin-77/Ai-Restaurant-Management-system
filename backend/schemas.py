@@ -60,6 +60,51 @@ class ImageUpload(BaseModel):
 
 
 # =========================================================
+# MENU CUSTOMIZATION SCHEMA
+# =========================================================
+
+class MenuCustomizationCreate(BaseModel):
+    """Define an extra ingredient/portion option for a menu item."""
+    menu_id: int
+    label: str
+    inventory_id: int
+    quantity_per_portion: float = 1.0
+    unit: str = "piece"
+    max_portions: int = 3
+    available: bool = True
+    sort_order: int = 0
+
+
+class MenuCustomizationUpdate(BaseModel):
+    """Update an existing customization option."""
+    label: Optional[str] = None
+    inventory_id: Optional[int] = None
+    quantity_per_portion: Optional[float] = None
+    unit: Optional[str] = None
+    max_portions: Optional[int] = None
+    available: Optional[bool] = None
+    sort_order: Optional[int] = None
+
+
+class MenuCustomizationResponse(BaseModel):
+    """Customization option with computed extra charge."""
+    id: int
+    menu_id: int
+    label: str
+    inventory_id: int
+    inventory_name: str
+    quantity_per_portion: float
+    unit: str
+    max_portions: int
+    available: bool
+    sort_order: int
+    # Server-computed extra charge per portion based on inventory cost
+    extra_charge_per_portion: float
+    # Configured markup multiplier (e.g., 1.5 = 50% markup)
+    markup_multiplier: float = 1.5
+
+
+# =========================================================
 # ORDER SCHEMA
 # =========================================================
 
@@ -138,6 +183,8 @@ class CheckoutLine(_QuantityGuard, BaseModel):
     menu_item_id: int
     quantity: int
     special_instructions: Optional[str] = None
+    # Optional customizations: list of {customization_id, portions}
+    customizations: Optional[list[dict]] = None
 
 
 class RestaurantTableCreate(BaseModel):

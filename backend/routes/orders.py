@@ -1047,3 +1047,194 @@ def remove_order(
         "message": "Order deleted successfully",
     }
 
+
+# ============================================================
+# MENU CUSTOMIZATION ENDPOINTS
+# ============================================================
+
+@router.get("/menu/{menu_id}/customizations")
+def get_menu_customizations(
+    menu_id: int,
+    db: Session = Depends(get_db),
+):
+    """Get all available customization options for a menu item."""
+    from models import MenuCustomization, Inventory
+
+    # Verify menu item exists
+    menu_item = db.query(Menu).filter(Menu.id == menu_id).first()
+    if not menu_item:
+        raise HTTPException(status_code=404, detail="Menu item not found")
+
+    customizations = db.query(MenuCustomization).filter(
+        MenuCustomization.menu_id == menu_id,
+        MenuCustomization.available == True
+    ).order_by(MenuCustomization.sort_order.asc()).all()
+
+    def _convert_to_base_unit(qty: float, from_unit: str, to_unit: str) -> float:
+        if from_unit == to_unit:
+            return qty
+        from_u = from_unit.lower().strip()
+        to_u = to_unit.lower().strip()
+        if from_u in ("g", "gram", "grams") and to_u in ("kg", "kilogram", "kilograms"):
+            return qty / 1000.0
+        if from_u in ("kg", "kilogram", "kilograms") and to_u in ("g", "gram", "grams"):
+            return qty * 1000.0
+        if from_u in ("ml", "millilitre", "millilitres") and to_u in ("litre", "liter", "litres", "liters"):
+            return qty / 1000.0
+        if from_u in ("litre", "liter", "litres", "liters") and to_u in ("ml", "millilitre", "millilitres"):
+            return qty * 1000.0
+        # Cross-category: ml <-> kg (for liquids, assume 1 litre = 1 kg)
+        if from_u in ("ml", "millilitre", "millilitres") and to_u in ("kg", "kilogram", "kilograms"):
+            return qty / 1000.0  # 1000 ml = 1 litre ≈ 1 kg
+        if from_u in ("kg", "kilogram", "kilograms") and to_u in ("ml", "millilitre", "millilitres"):
+            return qty * 1000.0  # 1 kg ≈ 1 litre = 1000 ml
+        # Cross-category: litre <-> kg (assume 1 litre = 1 kg for liquids)
+        if from_u in ("litre", "liter", "litres", "liters") and to_u in ("kg", "kilogram", "kilograms"):
+            return qty
+        if from_u in ("kg", "kilogram", "kilograms") and to_u in ("litre", "liter", "litres", "liters"):
+            return qty
+        return qty
+
+    result = []
+    for c in customizations:
+        inv = db.query(Inventory).filter(Inventory.id == c.inventory_id).first()
+        if inv:
+            # Convert customization quantity to inventory base unit
+            qty_in_base = _convert_to_base_unit(c.quantity_per_portion, c.unit, inv.unit)
+            ingredient_cost = float(inv.cost_per_unit or 0) * qty_in_base
+            extra_charge = round(ingredient_cost * 1.5, 2)  # 50% markup
+        else:
+            extra_charge = 0.0
+
+        result.append({
+            "id": c.id,
+            "menu_id": c.menu_id,
+            "label": c.label,
+            "inventory_id": c.inventory_id,
+            "inventory_name": inv.item_name if inv else "Unknown",
+            "quantity_per_portion": c.quantity_per_portion,
+            "unit": c.unit,
+            "max_portions": c.max_portions,
+            "available": c.available,
+            "sort_order": c.sort_order,
+            "extra_charge_per_portion": extra_charge,
+        })
+
+    return result
+
+
+@router.post("/menu/customizations")
+def create_menu_customization(
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_admin=Depends(require_admin),
+):
+    """Create a new customization option for a menu item (admin only)."""
+    from models import MenuCustomization, Menu, Inventory
+    from schemas import MenuCustomizationCreate
+
+    # Validate menu exists
+    menu_item = db.query(Menu).filter(Menu.id == payload.get("menu_id")).first()
+    if not menu_item:
+        raise HTTPException(status_code=404, detail="Menu item not found")
+
+    # Validate inventory exists
+    inv_item = db.query(Inventory).filter(Inventory.id == payload.get("inventory_id")).first()
+    if not inv_item:
+        raise HTTPException(status_code=404, detail="Inventory item not found")
+
+    cust = MenuCustomization(
+        menu_id=payload["menu_id"],
+        label=payload["label"],
+        inventory_id=payload["inventory_id"],
+        quantity_per_portion=payload.get("quantity_per_portion", 1.0),
+        unit=payload.get("unit", "piece"),
+        max_portions=payload.get("max_portions", 3),
+        available=payload.get("available", True),
+        sort_order=payload.get("sort_order", 0),
+    )
+
+    db.add(cust)
+    db.commit()
+    db.refresh(cust)
+
+    return {
+        "id": cust.id,
+        "menu_id": cust.menu_id,
+        "label": cust.label,
+        "inventory_id": cust.inventory_id,
+        "quantity_per_portion": cust.quantity_per_portion,
+        "unit": cust.unit,
+        "max_portions": cust.max_portions,
+        "available": cust.available,
+        "sort_order": cust.sort_order,
+    }
+
+
+@router.put("/menu/customizations/{cust_id}")
+def update_menu_customization(
+    cust_id: int,
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_admin=Depends(require_admin),
+):
+    """Update a customization option (admin only)."""
+    from models import MenuCustomization
+
+    cust = db.query(MenuCustomization).filter(MenuCustomization.id == cust_id).first()
+    if not cust:
+        raise HTTPException(status_code=404, detail="Customization not found")
+
+    if "label" in payload:
+        cust.label = payload["label"]
+    if "inventory_id" in payload:
+        # Validate inventory exists
+        inv_item = db.query(Inventory).filter(Inventory.id == payload["inventory_id"]).first()
+        if not inv_item:
+            raise HTTPException(status_code=404, detail="Inventory item not found")
+        cust.inventory_id = payload["inventory_id"]
+    if "quantity_per_portion" in payload:
+        cust.quantity_per_portion = payload["quantity_per_portion"]
+    if "unit" in payload:
+        cust.unit = payload["unit"]
+    if "max_portions" in payload:
+        cust.max_portions = payload["max_portions"]
+    if "available" in payload:
+        cust.available = payload["available"]
+    if "sort_order" in payload:
+        cust.sort_order = payload["sort_order"]
+
+    db.commit()
+    db.refresh(cust)
+
+    return {
+        "id": cust.id,
+        "menu_id": cust.menu_id,
+        "label": cust.label,
+        "inventory_id": cust.inventory_id,
+        "quantity_per_portion": cust.quantity_per_portion,
+        "unit": cust.unit,
+        "max_portions": cust.max_portions,
+        "available": cust.available,
+        "sort_order": cust.sort_order,
+    }
+
+
+@router.delete("/menu/customizations/{cust_id}")
+def delete_menu_customization(
+    cust_id: int,
+    db: Session = Depends(get_db),
+    current_admin=Depends(require_admin),
+):
+    """Delete a customization option (admin only)."""
+    from models import MenuCustomization
+
+    cust = db.query(MenuCustomization).filter(MenuCustomization.id == cust_id).first()
+    if not cust:
+        raise HTTPException(status_code=404, detail="Customization not found")
+
+    db.delete(cust)
+    db.commit()
+
+    return {"message": "Customization deleted successfully"}
+

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 
 import {
@@ -827,13 +827,44 @@ function Orders() {
  requests to the backend; neither decides anything.
  ============================================================ */
 
- // The server's ledger view of the selected bill. Read fresh whenever a
- // bill is opened, so nothing here is inferred from the header row.
- const [billPayments, setBillPayments] = useState(null);
- const [payBusy, setPayBusy] = useState(false);
- const [payNotice, setPayNotice] = useState("");
+// The server's ledger view of the selected bill. Read fresh whenever a
+  // bill is opened, so nothing here is inferred from the header row.
+  const [billPayments, setBillPayments] = useState(null);
+  const [payBusy, setPayBusy] = useState(false);
+  const [payNotice, setPayNotice] = useState("");
 
- // Whether the development simulation control is offered at all. It is
+  const loadBillPayments = useCallback(async (headerId) => {
+    try {
+      setPayNotice("");
+      const data = await getOrderPayments(headerId);
+      setBillPayments(data);
+    } catch (err) {
+      console.error(err);
+      setBillPayments(null);
+    }
+  }, []);
+
+  const isLegacyHeader = useCallback((header) => header.is_legacy === true || header.id < 0, []);
+
+  // Helper to run admin payment actions with busy state and error handling
+  const runAdminAction = useCallback(async (label, action) => {
+    setPayBusy(true);
+    setPayNotice("");
+    try {
+      await action();
+      // Refresh payment data after successful action
+      if (selectedHeader && !isLegacyHeader(selectedHeader)) {
+        await loadBillPayments(selectedHeader.id);
+      }
+    } catch (err) {
+      console.error(`Admin action "${label}" failed:`, err);
+      setPayNotice(err.response?.data?.detail || `${label} failed. Please try again.`);
+    } finally {
+      setPayBusy(false);
+    }
+  }, [selectedHeader, loadBillPayments, isLegacyHeader]);
+
+  // Whether the development simulation control is offered at all. It is
  // driven by the server's own configuration, never by a build flag, so
  // it disappears the moment payments stop being in development mode.
  const [simEnabled, setSimEnabled] = useState(false);
@@ -848,25 +879,7 @@ function Orders() {
  setSimEnabled(Boolean(data?.gateway?.simulation_enabled)),
  )
  .catch(() =>setSimEnabled(false));
- }, []);
-
- useEffect(() => {
- loadData();
- }, []);
-
-const loadBillPayments = async (headerId) => {
-  try {
-  setPayNotice("");
-  const data = await getOrderPayments(headerId);
-
-  setBillPayments(data);
-  } catch (err) {
-  console.error(err);
-  setBillPayments(null);
-  }
-  };
-
-const isLegacyHeader = (header) => header.is_legacy === true || header.id < 0;
+}, []);
 
   const openHeader = async (header) => {
   setSelectedHeader(header);
@@ -875,25 +888,25 @@ const isLegacyHeader = (header) => header.is_legacy === true || header.id < 0;
   if (!isLegacyHeader(header)) {
   await loadBillPayments(header.id);
   }
-  };
+};
 
- useEffect(() => {
- loadData();
- }, []);
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const headersData = await getOrderHeaders();
+      setOrderHeaders(headersData);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load orders.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
- const loadData = async () => {
- try {
- setLoading(true);
- setError("");
- const headersData = await getOrderHeaders();
- setOrderHeaders(headersData);
- } catch (err) {
- console.error(err);
- setError("Failed to load orders.");
- } finally {
- setLoading(false);
- }
- };
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
  const handleStatusChange = async (headerId, newStatus) => {
  try {
@@ -913,16 +926,11 @@ const isLegacyHeader = (header) => header.is_legacy === true || header.id < 0;
 
  const getValidNextStatuses = (header) =>header?.valid_next_statuses || [];
 
- const filteredHeaders = filterStatus === "All"
- ? orderHeaders
- : orderHeaders.filter(h =>h.status === filterStatus);
+const filteredHeaders = filterStatus === "All"
+  ? orderHeaders
+  : orderHeaders.filter(h =>h.status === filterStatus);
 
- const statusCounts = orderHeaders.reduce((acc, h) => {
- acc[h.status] = (acc[h.status] || 0) + 1;
- return acc;
- }, {});
-
- if (loading) {
+  if (loading) {
  return (
  <div className="orders-page">
  <div className="page-header">
@@ -936,61 +944,10 @@ const isLegacyHeader = (header) => header.is_legacy === true || header.id < 0;
 );
   }
 
-  // Compute payment attempts content for non-legacy headers
-  const paymentAttemptsContent = !isLegacyHeader(selectedHeader) && billPayments ? (
-    billPayments.payments.length === 0 ? (
-      <p className="pay-panel-note">
-        No payment has been requested for this bill yet.
-      </p>
-    ) : (
-      <div className="pay-attempts">
-        {billPayments.payments.map((payment) => (
-          <div key={payment.payment_id} className="pay-attempt">
-            <div className="pay-attempt-head">
-              <span className={`pay-state-badge pay-state-${payment.status.toLowerCase()}`}>
-                {payment.status}
-              </span>
-              <strong>{formatMoney(payment.amount, payment.currency)}</strong>
-            </div>
-            <div className="pay-attempt-meta">
-              <span>{payment.method} \u00b7 {payment.provider}</span>
-              {payment.provider_reference && <code>{payment.provider_reference}</code>}
-            </div>
-            {payment.paid_at && (
-              <div className="pay-attempt-meta">
-                Paid {new Date(payment.paid_at).toLocaleString()}
-              </div>
-            )}
-            {payment.failure_reason && (
-              <div className="pay-attempt-meta pay-panel-warn">
-                {payment.failure_reason}
-              </div>
-            )}
-            {payment.status === "PENDING" && payment.request?.upi_uri && (
-              <div className="pay-qr-wrap pay-qr-small">
-                <QRCodeSVG className="pay-qr" value={payment.request.upi_uri} size={168} level="M" marginSize={2} title="UPI payment QR code" />
-                <p className="pay-panel-note">
-                  Show this to the guest, or <a className="pay-upi-link" href={payment.request.upi_uri}>open it</a>.
-                </p>
-              </div>
-            )}
-            <div className="pay-attempt-actions">
-              {payment.status === "PENDING" && (
-                <button className="action-btn" disabled={payBusy} onClick={() => runAdminAction("Check payment", () => verifyPayment(payment.payment_id))}>
-                  Check payment
-                </button>
-              )}
-              {simEnabled && payment.status !== "SUCCESS" && (
-                <button className="action-btn dev-action" disabled={payBusy} onClick={() => runAdminAction("Simulate payment", () => simulateDevelopmentPayment(payment.payment_id, "SUCCESS"))}>
-                  Simulate verified payment (TEST)
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    )
-  ) : null;
+  const statusCounts = orderHeaders.reduce((acc, h) => {
+    acc[h.status] = (acc[h.status] || 0) + 1;
+    return acc;
+  }, {});
 
   return (
  <div className="orders-page">
@@ -1183,7 +1140,6 @@ const isLegacyHeader = (header) => header.is_legacy === true || header.id < 0;
   are: ask for a payment, or check whether one has been
   confirmed. There is no control that sets paid. */}
   {!isLegacyHeader(selectedHeader) && (
-  <>
   <div className="detail-section admin-pay-section">
   <h3>Bill & Payment</h3>
 
@@ -1337,7 +1293,7 @@ const isLegacyHeader = (header) => header.is_legacy === true || header.id < 0;
   () =>
   simulateDevelopmentPayment(
   payment.payment_id,
-  "SUCCESS",
+  "SUCCESS"
   )
   )
   }
@@ -1349,40 +1305,50 @@ const isLegacyHeader = (header) => header.is_legacy === true || header.id < 0;
   </div>
   ))}
   </div>
+))}
 
   {selectedHeader.payment_status !== "paid" && (
- <div className="pay-attempt-actions">
- <button
- className="action-btn"
- disabled={payBusy}
- onClick={() =>
- runAdminAction("Payment request", () =>
- createPaymentRequest(selectedHeader.id),
- )
- }
- >
- Request payment / show QR
- </button>
+  <div className="pay-attempt-actions">
+  <button
+  className="action-btn"
+  disabled={payBusy}
+  onClick={() =>
+  runAdminAction("Payment request", () =>
+  createPaymentRequest(selectedHeader.id),
+  )
+  }
+  >
+  Request payment / show QR
+  </button>
 </div>
   )}
 
-  {payNotice && (
-  <p className="pay-panel-note">{payNotice}</p>
-  )}
+  {payNotice && <p className="pay-panel-note">{payNotice}</p>}
 
   <p className="pay-panel-note">
   A bill is marked paid only when the payment provider
   confirms it. Displaying a QR, scanning it, and a
   guest saying they have paid all leave it UNPAID.
+<<<<<<< HEAD
   </p>
   )}
   </>
+=======
+</p>
+>>>>>>> 9a49519f (Update Paradise Restaurant AI Management System)
+  </div>
+  )}
   </div>
   </div>
   </div>
-  </div>
+<<<<<<< HEAD
  </div>
  );
+=======
+  )}
+  </div>
+  );
+>>>>>>> 9a49519f (Update Paradise Restaurant AI Management System)
 }
 
 export { PaymentsAndBills };

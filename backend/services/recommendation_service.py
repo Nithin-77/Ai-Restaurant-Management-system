@@ -50,13 +50,14 @@ told to invent a justification.
 """
 
 from collections import Counter, defaultdict
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from math import exp
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from models import Menu, Order
+from utils.timezone import restaurant_today
 
 
 # Component weights. They sum to 1.0 so `score` stays in 0..1.
@@ -126,7 +127,7 @@ def today_popularity(db: Session) -> dict:
     not of a person, so it carries no ownership problem. One grouped
     query, not one query per dish.
     """
-    today = date.today()
+    today = restaurant_today()
 
     rows = (
         db.query(

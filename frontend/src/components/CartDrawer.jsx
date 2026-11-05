@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-import { getDishImage } from "../dishImages";
+import { getDishImage, FALLBACK_DISH_IMAGE } from "../dishImages";
 import { formatMoney } from "../money";
 
 /**
@@ -25,6 +25,7 @@ export function CartDrawer({
   onDecrement,
   onRemove,
   onCheckout,
+  onEditCustomizations,
   busy = false,
   error = "",
 }) {
@@ -117,14 +118,17 @@ export function CartDrawer({
             <ul className="cart-list">
               {items.map((item) => (
                 <li key={item.id ?? item.menu_id} className="cart-line">
-                  <img
-                    src={getDishImage(item)}
-                    alt=""
-                    loading="lazy"
-                    decoding="async"
-                    width="56"
-                    height="56"
-                  />
+<img
+  src={getDishImage(item)}
+  alt=""
+  loading="lazy"
+  decoding="async"
+  width="56"
+  height="56"
+  onError={(e) => {
+    e.currentTarget.src = FALLBACK_DISH_IMAGE;
+  }}
+/>
 
                   <div className="cart-line-main">
                     <strong>
@@ -132,8 +136,19 @@ export function CartDrawer({
                     </strong>
 
                     <span className="cart-line-price">
-                      {formatMoney(item.price)}
+                      {formatMoney(item.final_unit_price ?? item.price)}
                     </span>
+
+                    {/* Customizations display */}
+                    {item.customizations && item.customizations.length > 0 && (
+                      <div className="cart-customizations">
+                        {item.customizations.map((cust, idx) => (
+                          <span key={idx} className="cart-customization-badge">
+                            + {cust.label} × {cust.portions} ({formatMoney(cust.extra_charge_total)})
+                          </span>
+                        ))}
+                      </div>
+                    )}
 
                     <div className="cart-qty">
                       <button
@@ -154,12 +169,23 @@ export function CartDrawer({
                         +
                       </button>
                     </div>
+
+                    {onEditCustomizations && (
+                      <button
+                        type="button"
+                        className="cart-edit-customizations"
+                        onClick={() => onEditCustomizations(item)}
+                        aria-label={`Edit customizations for ${item.name || item.menu_item}`}
+                      >
+                        ✎ Customize
+                      </button>
+                    )}
                   </div>
 
                   <div className="cart-line-end">
                     <strong>
                       {formatMoney(
-                        Number(item.price || 0) * Number(item.quantity || 0),
+                        Number(item.line_total || item.total_price || 0),
                       )}
                     </strong>
 

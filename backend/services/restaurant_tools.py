@@ -65,6 +65,7 @@ from models import (
 from services import analytics_service as analytics
 from services import event_service
 from services.analytics_service import resolve_range
+from utils.timezone import restaurant_today
 
 
 # =========================================================
@@ -981,7 +982,7 @@ def get_reservation_metrics(db: Session, params: dict) -> dict:
             Reservation.status,
         )
         .filter(
-            Reservation.reservation_date >= date.today(),
+            Reservation.reservation_date >= restaurant_today(),
             Reservation.status != "Cancelled",
         )
         .order_by(

@@ -1,4 +1,4 @@
-import { getDishImage, isVegItem, spiceLabel } from "../dishImages";
+import { getDishImage, isVegItem, spiceLabel, FALLBACK_DISH_IMAGE } from "../dishImages";
 import { formatMoney } from "../money";
 
 import Tilt from "./Tilt";
@@ -44,14 +44,17 @@ export function FoodCard({
         style={{ "--delay": `${Math.min(index, 8) * 70}ms` }}
       >
         <div className="food-card-media">
-          <img
-            src={getDishImage(item)}
-            alt={name}
-            loading={index < 3 ? "eager" : "lazy"}
-            decoding="async"
-            width="600"
-            height="400"
-          />
+<img
+  src={getDishImage(item)}
+  alt={name}
+  loading={index < 3 ? "eager" : "lazy"}
+  decoding="async"
+  width="600"
+  height="400"
+  onError={(e) => {
+    e.currentTarget.src = FALLBACK_DISH_IMAGE;
+  }}
+/>
 
           <div className="food-card-overlay" />
 
